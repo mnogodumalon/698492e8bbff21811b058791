@@ -1,17 +1,1 @@
-[
-  {
-    "content": "Create design_brief.md for Health & Nutrition Diary Dashboard",
-    "status": "completed",
-    "activeForm": "Creating design_brief.md"
-  },
-  {
-    "content": "Implement Dashboard.tsx following design brief",
-    "status": "completed",
-    "activeForm": "Implementing Dashboard.tsx"
-  },
-  {
-    "content": "Build project and deploy to GitHub",
-    "status": "in_progress",
-    "activeForm": "Building and deploying"
-  }
-]
+[]
