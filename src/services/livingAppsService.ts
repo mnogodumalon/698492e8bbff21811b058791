@@ -1,6 +1,6 @@
 // AUTOMATICALLY GENERATED SERVICE
 import { APP_IDS } from '@/types/app';
-import type { Essgewohnheiten, Symptomerfassung, Medikamenteneinnahme, TaeglicheErfassung } from '@/types/app';
+import type { Medikamenteneinnahme, TaeglicheErfassung, Symptomerfassung, Essgewohnheiten } from '@/types/app';
 
 // Base Configuration
 const API_BASE_URL = 'https://my.living-apps.de/rest';
@@ -31,48 +31,6 @@ async function callApi(method: string, endpoint: string, data?: any) {
 }
 
 export class LivingAppsService {
-  // --- ESSGEWOHNHEITEN ---
-  static async getEssgewohnheiten(): Promise<Essgewohnheiten[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records`);
-    return Object.entries(data).map(([id, rec]: [string, any]) => ({
-      record_id: id, ...rec
-    }));
-  }
-  static async getEssgewohnheitenEntry(id: string): Promise<Essgewohnheiten | undefined> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`);
-    return { record_id: data.id, ...data };
-  }
-  static async createEssgewohnheitenEntry(fields: Essgewohnheiten['fields']) {
-    return callApi('POST', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records`, { fields });
-  }
-  static async updateEssgewohnheitenEntry(id: string, fields: Partial<Essgewohnheiten['fields']>) {
-    return callApi('PATCH', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`, { fields });
-  }
-  static async deleteEssgewohnheitenEntry(id: string) {
-    return callApi('DELETE', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`);
-  }
-
-  // --- SYMPTOMERFASSUNG ---
-  static async getSymptomerfassung(): Promise<Symptomerfassung[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records`);
-    return Object.entries(data).map(([id, rec]: [string, any]) => ({
-      record_id: id, ...rec
-    }));
-  }
-  static async getSymptomerfassungEntry(id: string): Promise<Symptomerfassung | undefined> {
-    const data = await callApi('GET', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`);
-    return { record_id: data.id, ...data };
-  }
-  static async createSymptomerfassungEntry(fields: Symptomerfassung['fields']) {
-    return callApi('POST', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records`, { fields });
-  }
-  static async updateSymptomerfassungEntry(id: string, fields: Partial<Symptomerfassung['fields']>) {
-    return callApi('PATCH', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`, { fields });
-  }
-  static async deleteSymptomerfassungEntry(id: string) {
-    return callApi('DELETE', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`);
-  }
-
   // --- MEDIKAMENTENEINNAHME ---
   static async getMedikamenteneinnahme(): Promise<Medikamenteneinnahme[]> {
     const data = await callApi('GET', `/apps/${APP_IDS.MEDIKAMENTENEINNAHME}/records`);
@@ -113,6 +71,48 @@ export class LivingAppsService {
   }
   static async deleteTaeglicheErfassungEntry(id: string) {
     return callApi('DELETE', `/apps/${APP_IDS.TAEGLICHE_ERFASSUNG}/records/${id}`);
+  }
+
+  // --- SYMPTOMERFASSUNG ---
+  static async getSymptomerfassung(): Promise<Symptomerfassung[]> {
+    const data = await callApi('GET', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records`);
+    return Object.entries(data).map(([id, rec]: [string, any]) => ({
+      record_id: id, ...rec
+    }));
+  }
+  static async getSymptomerfassungEntry(id: string): Promise<Symptomerfassung | undefined> {
+    const data = await callApi('GET', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`);
+    return { record_id: data.id, ...data };
+  }
+  static async createSymptomerfassungEntry(fields: Symptomerfassung['fields']) {
+    return callApi('POST', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records`, { fields });
+  }
+  static async updateSymptomerfassungEntry(id: string, fields: Partial<Symptomerfassung['fields']>) {
+    return callApi('PATCH', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`, { fields });
+  }
+  static async deleteSymptomerfassungEntry(id: string) {
+    return callApi('DELETE', `/apps/${APP_IDS.SYMPTOMERFASSUNG}/records/${id}`);
+  }
+
+  // --- ESSGEWOHNHEITEN ---
+  static async getEssgewohnheiten(): Promise<Essgewohnheiten[]> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records`);
+    return Object.entries(data).map(([id, rec]: [string, any]) => ({
+      record_id: id, ...rec
+    }));
+  }
+  static async getEssgewohnheitenEntry(id: string): Promise<Essgewohnheiten | undefined> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`);
+    return { record_id: data.id, ...data };
+  }
+  static async createEssgewohnheitenEntry(fields: Essgewohnheiten['fields']) {
+    return callApi('POST', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records`, { fields });
+  }
+  static async updateEssgewohnheitenEntry(id: string, fields: Partial<Essgewohnheiten['fields']>) {
+    return callApi('PATCH', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`, { fields });
+  }
+  static async deleteEssgewohnheitenEntry(id: string) {
+    return callApi('DELETE', `/apps/${APP_IDS.ESSGEWOHNHEITEN}/records/${id}`);
   }
 
 }
