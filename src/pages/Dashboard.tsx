@@ -1,23 +1,59 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, parseISO, subDays, startOfDay, isToday } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Activity, Utensils, Pill, Plus, ChevronRight, Pencil, Trash2 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-import type { Symptomerfassung, Essgewohnheiten, Medikamenteneinnahme } from '@/types/app';
+import type { Essgewohnheiten, Symptomerfassung, Medikamenteneinnahme, TaeglicheErfassung } from '@/types/app';
 import { LivingAppsService } from '@/services/livingAppsService';
-
+import { format, parseISO, startOfDay, subDays, isToday } from 'date-fns';
+import { de } from 'date-fns/locale';
+import {
+  Utensils,
+  Activity,
+  Pill,
+  Plus,
+  Smile,
+  Meh,
+  Frown,
+  AlertCircle,
+  RefreshCw
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerFooter,
+  DrawerClose,
+} from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 // Symptom type labels
 const SYMPTOM_LABELS: Record<string, string> = {
@@ -27,262 +63,416 @@ const SYMPTOM_LABELS: Record<string, string> = {
   stimmung: 'Stimmung',
 };
 
-// Rating labels (1 = good, 10 = bad in the original scale)
+// Rating labels
 const RATING_LABELS: Record<string, string> = {
-  wert_1: '1 - Sehr gut',
-  wert_2: '2',
-  wert_3: '3',
-  wert_4: '4',
-  wert_5: '5',
-  wert_6: '6',
-  wert_7: '7',
-  wert_8: '8',
-  wert_9: '9',
-  wert_10: '10 - Sehr schlecht',
+  sehr_gut: 'Sehr gut',
+  gut: 'Gut',
+  geht_so: 'Geht so',
+  schlecht: 'Schlecht',
+  sehr_schlecht: 'Sehr schlecht',
 };
 
-// Extract numeric value from rating key (wert_1 -> 1, wert_10 -> 10)
-function getRatingValue(rating: string | undefined): number | null {
-  if (!rating) return null;
-  const match = rating.match(/wert_(\d+)/);
-  return match ? parseInt(match[1], 10) : null;
+// Map rating to numeric value (1 = best, 5 = worst)
+const RATING_VALUES: Record<string, number> = {
+  sehr_gut: 1,
+  gut: 2,
+  geht_so: 3,
+  schlecht: 4,
+  sehr_schlecht: 5,
+};
+
+// Map wert_X to numeric value (1-10 scale, 1 = best)
+const WERT_VALUES: Record<string, number> = {
+  wert_1: 1,
+  wert_2: 2,
+  wert_3: 3,
+  wert_4: 4,
+  wert_5: 5,
+  wert_6: 6,
+  wert_7: 7,
+  wert_8: 8,
+  wert_9: 9,
+  wert_10: 10,
+};
+
+// Symptom colors for chart
+const SYMPTOM_COLORS: Record<string, string> = {
+  raeuspern: 'hsl(145 45% 45%)',
+  lymphschwellung: 'hsl(200 60% 50%)',
+  energie: 'hsl(45 80% 55%)',
+  stimmung: 'hsl(280 50% 55%)',
+};
+
+interface DashboardData {
+  essgewohnheiten: Essgewohnheiten[];
+  symptomerfassung: Symptomerfassung[];
+  medikamenteneinnahme: Medikamenteneinnahme[];
+  taeglicheErfassung: TaeglicheErfassung[];
 }
 
-// Get wellness score from symptom rating (inverted: 1=bad in original becomes 10=good)
-function getWellnessScore(rating: string | undefined): number | null {
-  const value = getRatingValue(rating);
-  if (value === null) return null;
-  return 11 - value; // Invert: wert_1 (good) -> 10, wert_10 (bad) -> 1
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    setMatches(media.matches);
+
+    const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [query]);
+
+  return matches;
 }
 
-// Get color for wellness score
-function getWellnessColor(score: number): string {
-  if (score >= 8) return 'hsl(150 45% 45%)'; // Sage green - good
-  if (score >= 4) return 'hsl(40 80% 55%)'; // Warm yellow - moderate
-  return 'hsl(10 60% 55%)'; // Soft coral - needs attention
+function useDashboardData() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [essgewohnheiten, symptomerfassung, medikamenteneinnahme, taeglicheErfassung] = await Promise.all([
+        LivingAppsService.getEssgewohnheiten(),
+        LivingAppsService.getSymptomerfassung(),
+        LivingAppsService.getMedikamenteneinnahme(),
+        LivingAppsService.getTaeglicheErfassung(),
+      ]);
+      setData({ essgewohnheiten, symptomerfassung, medikamenteneinnahme, taeglicheErfassung });
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Fehler beim Laden der Daten'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return { data, loading, error, refetch: fetchData };
 }
 
-// Get message for wellness score
-function getWellnessMessage(score: number): string {
-  if (score >= 8) return 'Ausgezeichnet!';
-  if (score >= 6) return 'Guter Tag';
-  if (score >= 4) return 'Geht so';
-  return 'Achte auf dich';
+// Get today's date at start of day for comparisons
+function getTodayStart(): Date {
+  return startOfDay(new Date());
 }
 
-// Format time from datetime string
-function formatTime(datetime: string | undefined): string {
-  if (!datetime) return '--:--';
+// Check if a date string is from today
+function isDateToday(dateStr: string | undefined): boolean {
+  if (!dateStr) return false;
   try {
-    return format(parseISO(datetime), 'HH:mm');
-  } catch {
-    return '--:--';
-  }
-}
-
-// Check if date is today
-function isDateToday(datetime: string | undefined): boolean {
-  if (!datetime) return false;
-  try {
-    return isToday(parseISO(datetime));
+    return isToday(parseISO(dateStr));
   } catch {
     return false;
   }
 }
 
-// Combined entry type for list display
-type CombinedEntry = {
-  id: string;
-  type: 'symptom' | 'mahlzeit' | 'medikament';
-  time: string;
-  datetime: string;
-  description: string;
-  rating?: string;
-  record: Symptomerfassung | Essgewohnheiten | Medikamenteneinnahme;
-};
+// Calculate today's stats
+function calculateTodayStats(data: DashboardData) {
+  const todayMeals = data.essgewohnheiten.filter(e => isDateToday(e.fields.zeitpunkt_mahlzeit)).length +
+    data.taeglicheErfassung.filter(e => isDateToday(e.fields.zeitpunkt_eintrag) && e.fields.mahlzeit_beschreibung_gesamt).length;
 
-// Wellness Arc Component
-function WellnessArc({ score, size = 200 }: { score: number | null; size?: number }) {
-  const radius = (size - 20) / 2;
-  const circumference = Math.PI * radius; // Half circle
-  const strokeDashoffset = score !== null
-    ? circumference - (score / 10) * circumference
-    : circumference;
-  const color = score !== null ? getWellnessColor(score) : 'hsl(150 15% 88%)';
+  const todaySymptoms = data.symptomerfassung.filter(e => isDateToday(e.fields.zeitpunkt_symptom)).length +
+    data.taeglicheErfassung.filter(e => isDateToday(e.fields.zeitpunkt_eintrag) && e.fields.symptomtyp_gesamt).length;
+
+  const todayMeds = data.medikamenteneinnahme.filter(e => isDateToday(e.fields.zeitpunkt_einnahme)).length +
+    data.taeglicheErfassung.filter(e => isDateToday(e.fields.zeitpunkt_eintrag) && e.fields.medikamentenname_freitext_gesamt).length;
+
+  return { todayMeals, todaySymptoms, todayMeds };
+}
+
+// Calculate today's wellbeing from symptoms
+function calculateTodayWellbeing(data: DashboardData): { rating: string; numericValue: number; lastEntry: string | null } {
+  const todaySymptoms = data.symptomerfassung.filter(e => isDateToday(e.fields.zeitpunkt_symptom));
+  const todayEntries = data.taeglicheErfassung.filter(e => isDateToday(e.fields.zeitpunkt_eintrag) && e.fields.bewertung_symptom_gesamt);
+
+  let totalValue = 0;
+  let count = 0;
+  let lastEntry: string | null = null;
+
+  // From Symptomerfassung (1-10 scale)
+  todaySymptoms.forEach(s => {
+    if (s.fields.bewertung_symptom) {
+      const val = WERT_VALUES[s.fields.bewertung_symptom];
+      if (val) {
+        totalValue += val;
+        count++;
+        if (!lastEntry || (s.fields.zeitpunkt_symptom && s.fields.zeitpunkt_symptom > lastEntry)) {
+          lastEntry = s.fields.zeitpunkt_symptom || null;
+        }
+      }
+    }
+  });
+
+  // From TaeglicheErfassung (1-5 scale, convert to 1-10)
+  todayEntries.forEach(e => {
+    if (e.fields.bewertung_symptom_gesamt) {
+      const val = RATING_VALUES[e.fields.bewertung_symptom_gesamt];
+      if (val) {
+        totalValue += val * 2; // Convert 1-5 to 2-10 scale
+        count++;
+        if (!lastEntry || (e.fields.zeitpunkt_eintrag && e.fields.zeitpunkt_eintrag > lastEntry)) {
+          lastEntry = e.fields.zeitpunkt_eintrag || null;
+        }
+      }
+    }
+  });
+
+  if (count === 0) {
+    return { rating: 'keine', numericValue: 0, lastEntry: null };
+  }
+
+  const avgValue = totalValue / count;
+
+  // Convert average to rating text
+  let rating: string;
+  if (avgValue <= 2) rating = 'Sehr gut';
+  else if (avgValue <= 4) rating = 'Gut';
+  else if (avgValue <= 6) rating = 'Geht so';
+  else if (avgValue <= 8) rating = 'Schlecht';
+  else rating = 'Sehr schlecht';
+
+  return { rating, numericValue: avgValue, lastEntry };
+}
+
+// Get recent entries for the list
+function getRecentEntries(data: DashboardData, limit: number = 5) {
+  const entries: Array<{
+    id: string;
+    date: string;
+    meal?: string;
+    symptomRating?: string;
+    hasMeds: boolean;
+    source: 'taegliche' | 'individual';
+  }> = [];
+
+  // From TaeglicheErfassung
+  data.taeglicheErfassung.forEach(e => {
+    if (e.fields.zeitpunkt_eintrag) {
+      entries.push({
+        id: e.record_id,
+        date: e.fields.zeitpunkt_eintrag,
+        meal: e.fields.mahlzeit_beschreibung_gesamt,
+        symptomRating: e.fields.bewertung_symptom_gesamt ? RATING_LABELS[e.fields.bewertung_symptom_gesamt] : undefined,
+        hasMeds: !!e.fields.medikamentenname_freitext_gesamt,
+        source: 'taegliche',
+      });
+    }
+  });
+
+  // Sort by date descending and limit
+  return entries
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, limit);
+}
+
+// Prepare chart data for symptom trends
+function prepareChartData(data: DashboardData, days: number = 14) {
+  const today = getTodayStart();
+  const dateMap = new Map<string, Record<string, number[]>>();
+
+  // Initialize date map for last N days
+  for (let i = 0; i < days; i++) {
+    const date = format(subDays(today, i), 'yyyy-MM-dd');
+    dateMap.set(date, {
+      raeuspern: [],
+      lymphschwellung: [],
+      energie: [],
+      stimmung: [],
+    });
+  }
+
+  // Collect symptom data
+  data.symptomerfassung.forEach(s => {
+    if (!s.fields.zeitpunkt_symptom || !s.fields.symptomtyp || !s.fields.bewertung_symptom) return;
+    const date = s.fields.zeitpunkt_symptom.split('T')[0];
+    const dayData = dateMap.get(date);
+    if (dayData && s.fields.symptomtyp in dayData) {
+      const val = WERT_VALUES[s.fields.bewertung_symptom];
+      if (val) dayData[s.fields.symptomtyp].push(val);
+    }
+  });
+
+  // From TaeglicheErfassung
+  data.taeglicheErfassung.forEach(e => {
+    if (!e.fields.zeitpunkt_eintrag || !e.fields.symptomtyp_gesamt || !e.fields.bewertung_symptom_gesamt) return;
+    const date = e.fields.zeitpunkt_eintrag.split('T')[0];
+    const dayData = dateMap.get(date);
+    if (dayData && e.fields.symptomtyp_gesamt in dayData) {
+      const val = RATING_VALUES[e.fields.bewertung_symptom_gesamt];
+      if (val) dayData[e.fields.symptomtyp_gesamt].push(val * 2); // Scale to 1-10
+    }
+  });
+
+  // Convert to chart format
+  const chartData = Array.from(dateMap.entries())
+    .map(([date, symptoms]) => {
+      const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+      return {
+        date,
+        dateLabel: format(parseISO(date), 'dd.MM', { locale: de }),
+        raeuspern: avg(symptoms.raeuspern),
+        lymphschwellung: avg(symptoms.lymphschwellung),
+        energie: avg(symptoms.energie),
+        stimmung: avg(symptoms.stimmung),
+      };
+    })
+    .reverse(); // Oldest first
+
+  return chartData;
+}
+
+// Wellness Ring SVG Component
+function WellnessRing({ value, size = 200 }: { value: number; size?: number }) {
+  const strokeWidth = size * 0.04;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  // Value is 1-10 scale, convert to percentage (10 = 0%, 1 = 100%)
+  const percentage = value === 0 ? 0 : Math.max(0, Math.min(100, ((10 - value) / 9) * 100));
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  // Color based on value
+  let strokeColor = 'hsl(145 45% 45%)'; // Green for good
+  if (value > 6) strokeColor = 'hsl(0 65% 55%)'; // Red for bad
+  else if (value > 3) strokeColor = 'hsl(45 80% 55%)'; // Yellow for medium
 
   return (
-    <div className="relative flex flex-col items-center">
-      <svg width={size} height={size / 2 + 20} className="overflow-visible">
-        {/* Background arc */}
-        <path
-          d={`M ${10} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - 10} ${size / 2}`}
-          fill="none"
-          stroke="hsl(150 15% 88%)"
-          strokeWidth="10"
-          strokeLinecap="round"
-        />
-        {/* Foreground arc */}
-        <path
-          d={`M ${10} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - 10} ${size / 2}`}
-          fill="none"
-          stroke={color}
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="animate-arc"
-          style={{
-            transition: 'stroke 0.3s ease',
-          }}
-        />
-      </svg>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 text-center" style={{ marginTop: '-10px' }}>
-        <span className="text-6xl font-bold" style={{ color: score !== null ? color : undefined }}>
-          {score !== null ? score.toFixed(1) : '--'}
-        </span>
-        <span className="text-muted-foreground text-lg ml-1">von 10</span>
-      </div>
+    <svg width={size} height={size} className="transform -rotate-90">
+      {/* Background circle */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="hsl(45 20% 94%)"
+        strokeWidth={strokeWidth}
+      />
+      {/* Progress circle */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={strokeDashoffset}
+        className="transition-all duration-700 ease-out"
+      />
+    </svg>
+  );
+}
+
+// Mood icon based on rating
+function MoodIcon({ value, className = '' }: { value: number; className?: string }) {
+  if (value === 0) return <Meh className={`${className} text-muted-foreground`} />;
+  if (value <= 3) return <Smile className={`${className} text-green-600`} />;
+  if (value <= 6) return <Meh className={`${className} text-yellow-600`} />;
+  return <Frown className={`${className} text-red-600`} />;
+}
+
+// Stat Pill Component for mobile
+function StatPill({ icon: Icon, value, label }: { icon: React.ElementType; value: number; label: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-card rounded-full px-4 py-2 shadow-sm border min-w-[120px]">
+      <Icon className="h-4 w-4 text-primary" />
+      <span className="font-semibold">{value}</span>
+      <span className="text-muted-foreground text-sm truncate">{label}</span>
     </div>
   );
 }
 
-// Quick Stats Row Component
-function QuickStats({
-  symptomCount,
-  mealCount,
-  medicationCount
-}: {
-  symptomCount: number;
-  mealCount: number;
-  medicationCount: number;
-}) {
+// Stat Card Component for desktop
+function StatCard({ icon: Icon, value, label }: { icon: React.ElementType; value: number; label: string }) {
   return (
-    <div className="flex items-center justify-center gap-6 py-3">
-      <div className="flex items-center gap-2">
-        <Activity className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">{symptomCount}</span>
-        <span className="text-xs text-muted-foreground">Symptome</span>
-      </div>
-      <div className="h-4 w-px bg-border" />
-      <div className="flex items-center gap-2">
-        <Utensils className="h-4 w-4 text-amber-500" />
-        <span className="text-sm font-medium">{mealCount}</span>
-        <span className="text-xs text-muted-foreground">Mahlzeiten</span>
-      </div>
-      <div className="h-4 w-px bg-border" />
-      <div className="flex items-center gap-2">
-        <Pill className="h-4 w-4 text-blue-500" />
-        <span className="text-sm font-medium">{medicationCount}</span>
-        <span className="text-xs text-muted-foreground">Medikamente</span>
-      </div>
-    </div>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        <Icon className="h-4 w-4 text-primary" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 }
 
-// Entry List Item Component
-function EntryListItem({
-  entry,
-  onClick
-}: {
-  entry: CombinedEntry;
-  onClick: () => void;
+// Entry item for recent entries list
+function EntryItem({ entry, onClick }: {
+  entry: ReturnType<typeof getRecentEntries>[0];
+  onClick?: () => void;
 }) {
-  const dotColors = {
-    symptom: 'bg-primary',
-    mahlzeit: 'bg-amber-500',
-    medikament: 'bg-blue-500',
-  };
+  const dateStr = format(parseISO(entry.date), 'EEE, d. MMM', { locale: de });
+  const timeStr = format(parseISO(entry.date), 'HH:mm', { locale: de });
+
+  // Color dot based on symptom rating
+  let dotColor = 'bg-muted';
+  if (entry.symptomRating === 'Sehr gut' || entry.symptomRating === 'Gut') dotColor = 'bg-green-500';
+  else if (entry.symptomRating === 'Geht so') dotColor = 'bg-yellow-500';
+  else if (entry.symptomRating === 'Schlecht' || entry.symptomRating === 'Sehr schlecht') dotColor = 'bg-red-500';
 
   return (
     <div
-      className="flex items-center gap-3 py-3 px-2 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
+      className="p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors border bg-card"
       onClick={onClick}
     >
-      <div className={`w-2 h-2 rounded-full ${dotColors[entry.type]}`} />
-      <span className="text-sm text-muted-foreground w-12">{entry.time}</span>
-      <span className="text-sm flex-1 truncate">{entry.description}</span>
-      {entry.rating && (
-        <span className="text-xs text-muted-foreground">{entry.rating}</span>
-      )}
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">{dateStr}</span>
+            <span className="text-muted-foreground text-xs">{timeStr}</span>
+          </div>
+          {entry.meal && (
+            <p className="text-sm text-muted-foreground truncate mt-1">
+              {entry.meal.slice(0, 50)}{entry.meal.length > 50 ? '...' : ''}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {entry.hasMeds && <Pill className="h-3 w-3 text-muted-foreground" />}
+          <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+        </div>
+      </div>
     </div>
   );
 }
 
-// Add Entry Form Component
-function AddEntryForm({
-  type,
-  onSuccess,
-  onCancel
-}: {
-  type: 'symptom' | 'mahlzeit' | 'medikament';
-  onSuccess: () => void;
-  onCancel: () => void;
-}) {
+// Add Entry Form
+function AddEntryForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Form state
-  const [symptomType, setSymptomType] = useState<string>('');
-  const [symptomRating, setSymptomRating] = useState<string>('');
-  const [symptomNotes, setSymptomNotes] = useState('');
-  const [mealDescription, setMealDescription] = useState('');
-  const [mealPortion, setMealPortion] = useState('');
-  const [mealNotes, setMealNotes] = useState('');
-  const [medicationName, setMedicationName] = useState('');
-  const [medicationDosage, setMedicationDosage] = useState('');
-  const [medicationNotes, setMedicationNotes] = useState('');
+  const [formData, setFormData] = useState({
+    mahlzeit: '',
+    symptomtyp: '',
+    bewertung: '',
+    medikament: '',
+    dosierung: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
-
-    // Get current datetime in required format (YYYY-MM-DDTHH:MM)
-    const now = new Date();
-    const datetime = format(now, "yyyy-MM-dd'T'HH:mm");
 
     try {
-      if (type === 'symptom') {
-        if (!symptomType || !symptomRating) {
-          setError('Bitte Symptomtyp und Bewertung auswählen');
-          setSubmitting(false);
-          return;
-        }
-        await LivingAppsService.createSymptomerfassungEntry({
-          zeitpunkt_symptom: datetime,
-          symptomtyp: symptomType as Symptomerfassung['fields']['symptomtyp'],
-          bewertung_symptom: symptomRating as Symptomerfassung['fields']['bewertung_symptom'],
-          notizen_einzelsymptom: symptomNotes || undefined,
-        });
-      } else if (type === 'mahlzeit') {
-        if (!mealDescription) {
-          setError('Bitte Mahlzeit beschreiben');
-          setSubmitting(false);
-          return;
-        }
-        await LivingAppsService.createEssgewohnheitenEntry({
-          zeitpunkt_mahlzeit: datetime,
-          mahlzeit_beschreibung: mealDescription,
-          menge_portion: mealPortion || undefined,
-          notizen_essen: mealNotes || undefined,
-        });
-      } else if (type === 'medikament') {
-        if (!medicationName) {
-          setError('Bitte Medikamentenname eingeben');
-          setSubmitting(false);
-          return;
-        }
-        await LivingAppsService.createMedikamenteneinnahmeEntry({
-          zeitpunkt_einnahme: datetime,
-          medikamentenname: medicationName,
-          dosierung: medicationDosage || undefined,
-          notizen_medikamente: medicationNotes || undefined,
-        });
-      }
+      const now = new Date();
+      const zeitpunkt = format(now, "yyyy-MM-dd'T'HH:mm");
+
+      await LivingAppsService.createTaeglicheErfassungEntry({
+        zeitpunkt_eintrag: zeitpunkt,
+        mahlzeit_beschreibung_gesamt: formData.mahlzeit || undefined,
+        symptomtyp_gesamt: formData.symptomtyp as TaeglicheErfassung['fields']['symptomtyp_gesamt'] || undefined,
+        bewertung_symptom_gesamt: formData.bewertung || undefined,
+        medikamentenname_freitext_gesamt: formData.medikament || undefined,
+        dosierung_gesamt: formData.dosierung || undefined,
+      });
+
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+      console.error('Failed to create entry:', err);
     } finally {
       setSubmitting(false);
     }
@@ -290,119 +480,79 @@ function AddEntryForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Fehler</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      <div className="space-y-2">
+        <Label htmlFor="mahlzeit">Mahlzeit / Nahrungsmittel</Label>
+        <Textarea
+          id="mahlzeit"
+          placeholder="Was hast du gegessen?"
+          value={formData.mahlzeit}
+          onChange={(e) => setFormData(prev => ({ ...prev, mahlzeit: e.target.value }))}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="symptomtyp">Symptomtyp</Label>
+        <Select
+          value={formData.symptomtyp || "none"}
+          onValueChange={(v) => setFormData(prev => ({ ...prev, symptomtyp: v === "none" ? "" : v }))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Symptom auswählen..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Kein Symptom</SelectItem>
+            <SelectItem value="raeuspern">Räuspern</SelectItem>
+            <SelectItem value="lymphschwellung">Lymphschwellung</SelectItem>
+            <SelectItem value="energie">Energie</SelectItem>
+            <SelectItem value="stimmung">Stimmung</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {formData.symptomtyp && formData.symptomtyp !== "none" && (
+        <div className="space-y-2">
+          <Label>Bewertung</Label>
+          <RadioGroup
+            value={formData.bewertung}
+            onValueChange={(v) => setFormData(prev => ({ ...prev, bewertung: v }))}
+            className="grid grid-cols-5 gap-2"
+          >
+            {Object.entries(RATING_LABELS).map(([key, label]) => (
+              <div key={key} className="flex flex-col items-center gap-1">
+                <RadioGroupItem value={key} id={key} />
+                <Label htmlFor={key} className="text-xs text-center cursor-pointer">
+                  {label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
       )}
 
-      {type === 'symptom' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="symptomType">Symptomtyp</Label>
-            <Select value={symptomType} onValueChange={setSymptomType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Symptom auswählen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(SYMPTOM_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="symptomRating">Bewertung (1 = sehr gut, 10 = sehr schlecht)</Label>
-            <Select value={symptomRating} onValueChange={setSymptomRating}>
-              <SelectTrigger>
-                <SelectValue placeholder="Bewertung auswählen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(RATING_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="symptomNotes">Notizen (optional)</Label>
-            <Textarea
-              id="symptomNotes"
-              value={symptomNotes}
-              onChange={(e) => setSymptomNotes(e.target.value)}
-              placeholder="Zusätzliche Notizen..."
-            />
-          </div>
-        </>
+      <div className="space-y-2">
+        <Label htmlFor="medikament">Medikament</Label>
+        <Input
+          id="medikament"
+          placeholder="Medikamentenname"
+          value={formData.medikament}
+          onChange={(e) => setFormData(prev => ({ ...prev, medikament: e.target.value }))}
+        />
+      </div>
+
+      {formData.medikament && (
+        <div className="space-y-2">
+          <Label htmlFor="dosierung">Dosierung</Label>
+          <Input
+            id="dosierung"
+            placeholder="z.B. 500mg"
+            value={formData.dosierung}
+            onChange={(e) => setFormData(prev => ({ ...prev, dosierung: e.target.value }))}
+          />
+        </div>
       )}
 
-      {type === 'mahlzeit' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="mealDescription">Mahlzeit / Nahrungsmittel</Label>
-            <Textarea
-              id="mealDescription"
-              value={mealDescription}
-              onChange={(e) => setMealDescription(e.target.value)}
-              placeholder="Was haben Sie gegessen?"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="mealPortion">Menge / Portionsgröße (optional)</Label>
-            <Input
-              id="mealPortion"
-              value={mealPortion}
-              onChange={(e) => setMealPortion(e.target.value)}
-              placeholder="z.B. 1 Portion, 200g, ..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="mealNotes">Zusätzliche Notizen (optional)</Label>
-            <Textarea
-              id="mealNotes"
-              value={mealNotes}
-              onChange={(e) => setMealNotes(e.target.value)}
-              placeholder="Zusätzliche Informationen..."
-            />
-          </div>
-        </>
-      )}
-
-      {type === 'medikament' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="medicationName">Medikamentenname</Label>
-            <Input
-              id="medicationName"
-              value={medicationName}
-              onChange={(e) => setMedicationName(e.target.value)}
-              placeholder="Name des Medikaments"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="medicationDosage">Dosierung (optional)</Label>
-            <Input
-              id="medicationDosage"
-              value={medicationDosage}
-              onChange={(e) => setMedicationDosage(e.target.value)}
-              placeholder="z.B. 500mg, 1 Tablette, ..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="medicationNotes">Notizen (optional)</Label>
-            <Textarea
-              id="medicationNotes"
-              value={medicationNotes}
-              onChange={(e) => setMedicationNotes(e.target.value)}
-              placeholder="Zusätzliche Informationen..."
-            />
-          </div>
-        </>
-      )}
-
-      <div className="flex gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting} className="flex-1">
+      <div className="flex gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Abbrechen
         </Button>
         <Button type="submit" disabled={submitting} className="flex-1">
@@ -413,875 +563,410 @@ function AddEntryForm({
   );
 }
 
-// Entry Type Selection Component
-function EntryTypeSelection({ onSelect }: { onSelect: (type: 'symptom' | 'mahlzeit' | 'medikament') => void }) {
-  return (
-    <div className="space-y-3">
-      <Button
-        variant="default"
-        className="w-full h-14 justify-start gap-3 text-left"
-        onClick={() => onSelect('symptom')}
-      >
-        <Activity className="h-5 w-5" />
-        <div>
-          <div className="font-medium">Symptom erfassen</div>
-          <div className="text-xs opacity-80">Energie, Stimmung, Beschwerden</div>
-        </div>
-      </Button>
-      <Button
-        variant="outline"
-        className="w-full h-14 justify-start gap-3 text-left"
-        onClick={() => onSelect('mahlzeit')}
-      >
-        <Utensils className="h-5 w-5" />
-        <div>
-          <div className="font-medium">Mahlzeit hinzufügen</div>
-          <div className="text-xs text-muted-foreground">Was haben Sie gegessen?</div>
-        </div>
-      </Button>
-      <Button
-        variant="outline"
-        className="w-full h-14 justify-start gap-3 text-left"
-        onClick={() => onSelect('medikament')}
-      >
-        <Pill className="h-5 w-5" />
-        <div>
-          <div className="font-medium">Medikament eintragen</div>
-          <div className="text-xs text-muted-foreground">Einnahme dokumentieren</div>
-        </div>
-      </Button>
-    </div>
-  );
-}
-
-// Entry Detail Sheet Component
-function EntryDetailSheet({
-  entry,
-  open,
-  onOpenChange,
-  onDelete,
-  onEdit
-}: {
-  entry: CombinedEntry | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDelete: (entry: CombinedEntry) => Promise<void>;
-  onEdit: () => void;
-}) {
-  const [deleting, setDeleting] = useState(false);
-
-  if (!entry) return null;
-
-  const typeLabels = {
-    symptom: 'Symptom',
-    mahlzeit: 'Mahlzeit',
-    medikament: 'Medikament',
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    await onDelete(entry);
-    setDeleting(false);
-    onOpenChange(false);
-  };
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[80vh]">
-        <SheetHeader>
-          <SheetTitle>{typeLabels[entry.type]}</SheetTitle>
-        </SheetHeader>
-        <div className="py-4 space-y-4">
-          <div>
-            <div className="text-sm text-muted-foreground">Zeitpunkt</div>
-            <div className="font-medium">{entry.datetime ? format(parseISO(entry.datetime), 'PPPp', { locale: de }) : '--'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Beschreibung</div>
-            <div className="font-medium">{entry.description}</div>
-          </div>
-          {entry.rating && (
-            <div>
-              <div className="text-sm text-muted-foreground">Bewertung</div>
-              <div className="font-medium">{entry.rating}</div>
-            </div>
-          )}
-          {entry.type === 'symptom' && (entry.record as Symptomerfassung).fields.notizen_einzelsymptom && (
-            <div>
-              <div className="text-sm text-muted-foreground">Notizen</div>
-              <div className="font-medium">{(entry.record as Symptomerfassung).fields.notizen_einzelsymptom}</div>
-            </div>
-          )}
-          {entry.type === 'mahlzeit' && (
-            <>
-              {(entry.record as Essgewohnheiten).fields.menge_portion && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Menge</div>
-                  <div className="font-medium">{(entry.record as Essgewohnheiten).fields.menge_portion}</div>
-                </div>
-              )}
-              {(entry.record as Essgewohnheiten).fields.notizen_essen && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Notizen</div>
-                  <div className="font-medium">{(entry.record as Essgewohnheiten).fields.notizen_essen}</div>
-                </div>
-              )}
-            </>
-          )}
-          {entry.type === 'medikament' && (
-            <>
-              {(entry.record as Medikamenteneinnahme).fields.dosierung && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Dosierung</div>
-                  <div className="font-medium">{(entry.record as Medikamenteneinnahme).fields.dosierung}</div>
-                </div>
-              )}
-              {(entry.record as Medikamenteneinnahme).fields.notizen_medikamente && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Notizen</div>
-                  <div className="font-medium">{(entry.record as Medikamenteneinnahme).fields.notizen_medikamente}</div>
-                </div>
-              )}
-            </>
-          )}
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="flex-1 gap-2" onClick={onEdit}>
-              <Pencil className="h-4 w-4" />
-              Bearbeiten
-            </Button>
-            <Button variant="destructive" className="flex-1 gap-2" onClick={handleDelete} disabled={deleting}>
-              <Trash2 className="h-4 w-4" />
-              {deleting ? 'Löschen...' : 'Löschen'}
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-// Loading State Component
+// Loading State
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-background p-4 lg:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-32" />
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-8 w-24" />
         </div>
-        <div className="flex flex-col items-center space-y-4">
-          <Skeleton className="h-32 w-64 rounded-full" />
-          <Skeleton className="h-6 w-24" />
+        <div className="flex justify-center py-8">
+          <Skeleton className="h-48 w-48 rounded-full" />
         </div>
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-48 w-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          <Skeleton className="h-10 w-32 rounded-full" />
+          <Skeleton className="h-10 w-32 rounded-full" />
+          <Skeleton className="h-10 w-32 rounded-full" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
       </div>
     </div>
   );
 }
 
-// Error State Component
+// Error State
 function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <AlertTitle>Fehler beim Laden</AlertTitle>
-            <AlertDescription className="mt-2">
-              {error.message}
-            </AlertDescription>
-          </Alert>
-          <Button onClick={onRetry} className="w-full mt-4">
+    <div className="min-h-screen bg-background p-4 md:p-6 flex items-center justify-center">
+      <Alert variant="destructive" className="max-w-md">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Fehler beim Laden</AlertTitle>
+        <AlertDescription className="mt-2">
+          <p className="mb-4">{error.message}</p>
+          <Button variant="outline" onClick={onRetry} size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
             Erneut versuchen
           </Button>
-        </CardContent>
-      </Card>
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
+}
+
+// Empty State
+function EmptyState({ onAddEntry }: { onAddEntry: () => void }) {
+  return (
+    <div className="text-center py-12">
+      <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+        <Activity className="h-8 w-8 text-primary" />
+      </div>
+      <h3 className="font-semibold text-lg mb-2">Noch keine Einträge</h3>
+      <p className="text-muted-foreground mb-4">
+        Beginne mit deinem ersten Tagebucheintrag
+      </p>
+      <Button onClick={onAddEntry}>
+        <Plus className="h-4 w-4 mr-2" />
+        Ersten Eintrag erstellen
+      </Button>
     </div>
   );
 }
 
 // Main Dashboard Component
 export default function Dashboard() {
-  const [symptoms, setSymptoms] = useState<Symptomerfassung[]>([]);
-  const [meals, setMeals] = useState<Essgewohnheiten[]>([]);
-  const [medications, setMedications] = useState<Medikamenteneinnahme[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data, loading, error, refetch } = useDashboardData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
 
-  // Dialog/Sheet state
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedEntryType, setSelectedEntryType] = useState<'symptom' | 'mahlzeit' | 'medikament' | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<CombinedEntry | null>(null);
-  const [entryDetailOpen, setEntryDetailOpen] = useState(false);
+  const todayStats = useMemo(() => {
+    if (!data) return { todayMeals: 0, todaySymptoms: 0, todayMeds: 0 };
+    return calculateTodayStats(data);
+  }, [data]);
 
-  // Fetch data
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [symptomsData, mealsData, medicationsData] = await Promise.all([
-        LivingAppsService.getSymptomerfassung(),
-        LivingAppsService.getEssgewohnheiten(),
-        LivingAppsService.getMedikamenteneinnahme(),
-      ]);
-      setSymptoms(symptomsData);
-      setMeals(mealsData);
-      setMedications(medicationsData);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unbekannter Fehler'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const todayWellbeing = useMemo(() => {
+    if (!data) return { rating: 'keine', numericValue: 0, lastEntry: null };
+    return calculateTodayWellbeing(data);
+  }, [data]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const recentEntries = useMemo(() => {
+    if (!data) return [];
+    return getRecentEntries(data, isDesktop ? 7 : 5);
+  }, [data, isDesktop]);
 
-  // Calculate today's data
-  const todaysSymptoms = useMemo(() =>
-    symptoms.filter(s => isDateToday(s.fields.zeitpunkt_symptom)),
-    [symptoms]
-  );
+  const chartData = useMemo(() => {
+    if (!data) return [];
+    return prepareChartData(data, isDesktop ? 14 : 7);
+  }, [data, isDesktop]);
 
-  const todaysMeals = useMemo(() =>
-    meals.filter(m => isDateToday(m.fields.zeitpunkt_mahlzeit)),
-    [meals]
-  );
-
-  const todaysMedications = useMemo(() =>
-    medications.filter(m => isDateToday(m.fields.zeitpunkt_einnahme)),
-    [medications]
-  );
-
-  // Calculate wellness score (average of today's symptoms, inverted)
-  const wellnessScore = useMemo(() => {
-    if (todaysSymptoms.length === 0) return null;
-    const scores = todaysSymptoms
-      .map(s => getWellnessScore(s.fields.bewertung_symptom))
-      .filter((s): s is number => s !== null);
-    if (scores.length === 0) return null;
-    return scores.reduce((a, b) => a + b, 0) / scores.length;
-  }, [todaysSymptoms]);
-
-  // Calculate 7-day trend data
-  const trendData = useMemo(() => {
-    const days = [];
-    const today = startOfDay(new Date());
-
-    for (let i = 6; i >= 0; i--) {
-      const day = subDays(today, i);
-      const dayStr = format(day, 'yyyy-MM-dd');
-      const dayLabel = format(day, 'EEE', { locale: de });
-
-      const daySymptoms = symptoms.filter(s => {
-        const symptomDate = s.fields.zeitpunkt_symptom?.split('T')[0];
-        return symptomDate === dayStr;
-      });
-
-      const scores = daySymptoms
-        .map(s => getWellnessScore(s.fields.bewertung_symptom))
-        .filter((s): s is number => s !== null);
-
-      const avgScore = scores.length > 0
-        ? scores.reduce((a, b) => a + b, 0) / scores.length
-        : null;
-
-      days.push({
-        day: dayLabel,
-        date: dayStr,
-        score: avgScore,
-        fullDate: format(day, 'PPP', { locale: de }),
-      });
-    }
-
-    return days;
-  }, [symptoms]);
-
-  // Calculate symptom type distribution for donut chart
-  const symptomDistribution = useMemo(() => {
-    const last7Days = symptoms.filter(s => {
-      const date = s.fields.zeitpunkt_symptom?.split('T')[0];
-      if (!date) return false;
-      const symptomDate = parseISO(date);
-      const weekAgo = subDays(new Date(), 7);
-      return symptomDate >= weekAgo;
-    });
-
-    const counts: Record<string, number> = {};
-    last7Days.forEach(s => {
-      const type = s.fields.symptomtyp;
-      if (type) {
-        counts[type] = (counts[type] || 0) + 1;
-      }
-    });
-
-    return Object.entries(counts).map(([key, value]) => ({
-      name: SYMPTOM_LABELS[key] || key,
-      value,
-      key,
-    }));
-  }, [symptoms]);
-
-  // Combined entries for today (sorted by time, newest first)
-  const combinedEntries = useMemo((): CombinedEntry[] => {
-    const entries: CombinedEntry[] = [];
-
-    todaysSymptoms.forEach(s => {
-      const ratingValue = getRatingValue(s.fields.bewertung_symptom);
-      entries.push({
-        id: s.record_id,
-        type: 'symptom',
-        time: formatTime(s.fields.zeitpunkt_symptom),
-        datetime: s.fields.zeitpunkt_symptom || '',
-        description: SYMPTOM_LABELS[s.fields.symptomtyp || ''] || s.fields.symptomtyp || 'Symptom',
-        rating: ratingValue !== null ? `${ratingValue} von 10` : undefined,
-        record: s,
-      });
-    });
-
-    todaysMeals.forEach(m => {
-      entries.push({
-        id: m.record_id,
-        type: 'mahlzeit',
-        time: formatTime(m.fields.zeitpunkt_mahlzeit),
-        datetime: m.fields.zeitpunkt_mahlzeit || '',
-        description: m.fields.mahlzeit_beschreibung || 'Mahlzeit',
-        record: m,
-      });
-    });
-
-    todaysMedications.forEach(m => {
-      entries.push({
-        id: m.record_id,
-        type: 'medikament',
-        time: formatTime(m.fields.zeitpunkt_einnahme),
-        datetime: m.fields.zeitpunkt_einnahme || '',
-        description: m.fields.medikamentenname || 'Medikament',
-        record: m,
-      });
-    });
-
-    // Sort by time descending
-    return entries.sort((a, b) => b.datetime.localeCompare(a.datetime));
-  }, [todaysSymptoms, todaysMeals, todaysMedications]);
-
-  // Handle entry deletion
-  const handleDeleteEntry = async (entry: CombinedEntry) => {
-    try {
-      if (entry.type === 'symptom') {
-        await LivingAppsService.deleteSymptomerfassungEntry(entry.id);
-      } else if (entry.type === 'mahlzeit') {
-        await LivingAppsService.deleteEssgewohnheitenEntry(entry.id);
-      } else if (entry.type === 'medikament') {
-        await LivingAppsService.deleteMedikamenteneinnahmeEntry(entry.id);
-      }
-      await fetchData();
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
-  };
-
-  // Handle add entry success
   const handleAddSuccess = () => {
-    setSelectedEntryType(null);
-    setAddDialogOpen(false);
-    fetchData();
+    setDialogOpen(false);
+    setDrawerOpen(false);
+    refetch();
   };
 
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState error={error} onRetry={fetchData} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  if (!data) return null;
 
-  const today = new Date();
-  const formattedDate = format(today, 'EEEE, d. MMMM', { locale: de });
+  const hasNoData = data.taeglicheErfassung.length === 0 &&
+    data.essgewohnheiten.length === 0 &&
+    data.symptomerfassung.length === 0 &&
+    data.medikamenteneinnahme.length === 0;
 
-  const CHART_COLORS = ['hsl(150 45% 45%)', 'hsl(40 80% 55%)', 'hsl(200 70% 50%)', 'hsl(10 60% 55%)'];
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile Layout */}
-      <div className="lg:hidden">
+  // Mobile Layout
+  if (!isDesktop) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
         {/* Header */}
-        <header className="p-4 pt-6 animate-fade-up">
-          <h1 className="text-xl font-semibold">Mein Tagebuch</h1>
-          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+        <header className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-4 py-3 border-b">
+          <div className="flex justify-between items-center">
+            <h1 className="font-semibold text-lg">Tagebuch</h1>
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(), 'EEE, d. MMM', { locale: de })}
+            </span>
+          </div>
         </header>
 
-        {/* Hero Section - Wellness Indicator */}
-        <section className="px-4 py-6 animate-fade-up">
-          <div className="flex flex-col items-center">
-            <WellnessArc score={wellnessScore} size={240} />
-            <p className="mt-2 text-lg font-medium" style={{ color: wellnessScore ? getWellnessColor(wellnessScore) : undefined }}>
-              {wellnessScore !== null ? getWellnessMessage(wellnessScore) : 'Noch keine Daten'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {todaysSymptoms.length > 0
-                ? `${todaysSymptoms.length} Symptom${todaysSymptoms.length > 1 ? 'e' : ''} heute erfasst`
-                : 'Erfasse dein erstes Symptom'}
-            </p>
+        {hasNoData ? (
+          <div className="p-4">
+            <EmptyState onAddEntry={() => setDrawerOpen(true)} />
           </div>
-        </section>
-
-        {/* Quick Stats Row */}
-        <section className="px-4 animate-fade-up animation-delay-100">
-          <QuickStats
-            symptomCount={todaysSymptoms.length}
-            mealCount={todaysMeals.length}
-            medicationCount={todaysMedications.length}
-          />
-        </section>
-
-        {/* Trend Chart */}
-        <section className="px-4 py-6 animate-fade-up animation-delay-200">
-          <h2 className="text-base font-medium mb-3">Letzte 7 Tage</h2>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(150 45% 45%)" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="hsl(150 45% 45%)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(150 10% 45%)' }}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-card border border-border rounded-lg p-2 shadow-lg">
-                          <p className="text-xs text-muted-foreground">{data.fullDate}</p>
-                          <p className="font-medium">
-                            {data.score !== null ? `${data.score.toFixed(1)} / 10` : 'Keine Daten'}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="hsl(150 45% 45%)"
-                  strokeWidth={2}
-                  fill="url(#colorScore)"
-                  connectNulls
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        {/* Today's Entries */}
-        <section className="px-4 pb-24 animate-fade-up animation-delay-300">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-medium">Heutige Einträge</h2>
-          </div>
-          {combinedEntries.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Noch keine Einträge heute.</p>
-              <p className="text-sm mt-1">Starte mit deinem ersten Eintrag!</p>
+        ) : (
+          <div className="p-4 space-y-6">
+            {/* Hero: Wellness Ring */}
+            <div className="flex flex-col items-center py-6 animate-in fade-in duration-500">
+              <div className="relative">
+                <WellnessRing value={todayWellbeing.numericValue} size={200} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <MoodIcon value={todayWellbeing.numericValue} className="h-12 w-12" />
+                </div>
+              </div>
+              <div className="text-center mt-4">
+                <h2 className="text-lg font-medium text-muted-foreground">Heutiges Befinden</h2>
+                <p className="text-2xl font-bold mt-1">{todayWellbeing.rating}</p>
+                {todayWellbeing.lastEntry && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Zuletzt: {format(parseISO(todayWellbeing.lastEntry), 'HH:mm', { locale: de })} Uhr
+                  </p>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-1">
-              {combinedEntries.slice(0, 5).map(entry => (
-                <EntryListItem
-                  key={entry.id}
-                  entry={entry}
-                  onClick={() => {
-                    setSelectedEntry(entry);
-                    setEntryDetailOpen(true);
-                  }}
-                />
-              ))}
-              {combinedEntries.length > 5 && (
-                <Button variant="ghost" className="w-full text-muted-foreground">
-                  Alle {combinedEntries.length} Einträge anzeigen
-                </Button>
+
+            {/* Quick Stats Row */}
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 animate-in fade-in duration-500 delay-100">
+              <StatPill icon={Utensils} value={todayStats.todayMeals} label="Mahlzeiten" />
+              <StatPill icon={Activity} value={todayStats.todaySymptoms} label="Symptome" />
+              <StatPill icon={Pill} value={todayStats.todayMeds} label="Medikamente" />
+            </div>
+
+            {/* Recent Entries */}
+            <div className="space-y-3 animate-in fade-in duration-500 delay-200">
+              <h3 className="font-semibold">Letzte Einträge</h3>
+              {recentEntries.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Noch keine Einträge vorhanden</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentEntries.map(entry => (
+                    <EntryItem key={entry.id} entry={entry} />
+                  ))}
+                </div>
               )}
             </div>
-          )}
-        </section>
+
+            {/* Symptom Trend Chart */}
+            {chartData.some(d => d.raeuspern || d.lymphschwellung || d.energie || d.stimmung) && (
+              <div className="space-y-3 animate-in fade-in duration-500 delay-300">
+                <h3 className="font-semibold">Symptom-Verlauf</h3>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <XAxis
+                            dataKey="dateLabel"
+                            tick={{ fontSize: 10 }}
+                            stroke="hsl(150 5% 50%)"
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'hsl(0 0% 100%)',
+                              border: '1px solid hsl(45 15% 88%)',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                            }}
+                            formatter={(value: number, name: string) => [
+                              value?.toFixed(1) || '-',
+                              SYMPTOM_LABELS[name] || name
+                            ]}
+                          />
+                          {Object.keys(SYMPTOM_COLORS).map(key => (
+                            <Line
+                              key={key}
+                              type="monotone"
+                              dataKey={key}
+                              stroke={SYMPTOM_COLORS[key]}
+                              strokeWidth={2}
+                              dot={false}
+                              connectNulls
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center mt-2">Letzte 7 Tage</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Fixed Bottom Action Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t border-border">
-          <Dialog open={addDialogOpen} onOpenChange={(open) => {
-            setAddDialogOpen(open);
-            if (!open) setSelectedEntryType(null);
-          }}>
-            <DialogTrigger asChild>
-              <Button className="w-full h-14 text-base gap-2">
-                <Plus className="h-5 w-5" />
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <DrawerTrigger asChild>
+              <Button className="w-full h-14 text-base" size="lg">
+                <Plus className="h-5 w-5 mr-2" />
                 Eintrag hinzufügen
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedEntryType === 'symptom' && 'Symptom erfassen'}
-                  {selectedEntryType === 'mahlzeit' && 'Mahlzeit hinzufügen'}
-                  {selectedEntryType === 'medikament' && 'Medikament eintragen'}
-                  {!selectedEntryType && 'Neuer Eintrag'}
-                </DialogTitle>
-              </DialogHeader>
-              {selectedEntryType ? (
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Neuer Eintrag</DrawerTitle>
+              </DrawerHeader>
+              <div className="p-4 overflow-y-auto max-h-[60vh]">
                 <AddEntryForm
-                  type={selectedEntryType}
                   onSuccess={handleAddSuccess}
-                  onCancel={() => setSelectedEntryType(null)}
+                  onCancel={() => setDrawerOpen(false)}
                 />
-              ) : (
-                <EntryTypeSelection onSelect={setSelectedEntryType} />
-              )}
-            </DialogContent>
-          </Dialog>
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
-
-        {/* Entry Detail Sheet */}
-        <EntryDetailSheet
-          entry={selectedEntry}
-          open={entryDetailOpen}
-          onOpenChange={setEntryDetailOpen}
-          onDelete={handleDeleteEntry}
-          onEdit={() => {
-            // For simplicity, close and reopen add dialog
-            setEntryDetailOpen(false);
-          }}
-        />
       </div>
+    );
+  }
 
-      {/* Desktop Layout */}
-      <div className="hidden lg:block">
-        <div className="max-w-6xl mx-auto px-8 py-10">
-          {/* Header */}
-          <header className="flex items-center justify-between mb-8 animate-fade-up">
-            <div>
-              <h1 className="text-2xl font-semibold">Mein Gesundheitstagebuch</h1>
-              <p className="text-muted-foreground">{formattedDate}</p>
-            </div>
-          </header>
+  // Desktop Layout
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+          <h1 className="font-bold text-xl">Gesundheits- und Ernährungstagebuch</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de })}
+            </span>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Neuer Eintrag
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Neuer Eintrag</DialogTitle>
+                </DialogHeader>
+                <AddEntryForm
+                  onSuccess={handleAddSuccess}
+                  onCancel={() => setDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </header>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-5 gap-8">
-            {/* Left Column - 60% (3/5) */}
-            <div className="col-span-3 space-y-8">
-              {/* Hero Wellness Indicator */}
-              <Card className="animate-fade-up">
+      {hasNoData ? (
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <EmptyState onAddEntry={() => setDialogOpen(true)} />
+        </div>
+      ) : (
+        <main className="max-w-6xl mx-auto px-6 py-6">
+          <div className="grid grid-cols-[1fr_320px] gap-6">
+            {/* Left Column (65%) */}
+            <div className="space-y-6">
+              {/* Hero Card: Wellness Ring */}
+              <Card className="animate-in fade-in duration-500">
                 <CardContent className="pt-6">
-                  <div className="flex flex-col items-center">
-                    <WellnessArc score={wellnessScore} size={280} />
-                    <p className="mt-4 text-xl font-medium" style={{ color: wellnessScore ? getWellnessColor(wellnessScore) : undefined }}>
-                      {wellnessScore !== null ? getWellnessMessage(wellnessScore) : 'Noch keine Daten'}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {todaysSymptoms.length > 0
-                        ? `${todaysSymptoms.length} Symptom${todaysSymptoms.length > 1 ? 'e' : ''} heute erfasst`
-                        : 'Erfasse dein erstes Symptom'}
-                    </p>
+                  <div className="flex items-center gap-8">
+                    <div className="relative">
+                      <WellnessRing value={todayWellbeing.numericValue} size={280} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <MoodIcon value={todayWellbeing.numericValue} className="h-16 w-16" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-lg font-medium text-muted-foreground">Heutiges Befinden</h2>
+                      <p className="text-4xl font-bold mt-2">{todayWellbeing.rating}</p>
+                      {todayWellbeing.lastEntry && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Letzter Eintrag: {format(parseISO(todayWellbeing.lastEntry), 'HH:mm', { locale: de })} Uhr
+                        </p>
+                      )}
+
+                      {/* Symptom Legend */}
+                      <div className="grid grid-cols-2 gap-2 mt-6">
+                        {Object.entries(SYMPTOM_LABELS).map(([key, label]) => (
+                          <div key={key} className="flex items-center gap-2 text-sm">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: SYMPTOM_COLORS[key] }}
+                            />
+                            <span className="text-muted-foreground">{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Trend Chart */}
-              <Card className="animate-fade-up animation-delay-100">
+              {/* Symptom Trend Chart */}
+              <Card className="animate-in fade-in duration-500 delay-100">
                 <CardHeader>
-                  <CardTitle className="text-base">Letzte 7 Tage</CardTitle>
+                  <CardTitle>Symptom-Verlauf</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-52">
+                  <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trendData}>
-                        <defs>
-                          <linearGradient id="colorScoreDesktop" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(150 45% 45%)" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="hsl(150 45% 45%)" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
+                      <LineChart data={chartData}>
                         <XAxis
-                          dataKey="day"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fill: 'hsl(150 10% 45%)' }}
+                          dataKey="dateLabel"
+                          tick={{ fontSize: 12 }}
+                          stroke="hsl(150 5% 50%)"
                         />
                         <YAxis
-                          domain={[0, 10]}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fill: 'hsl(150 10% 45%)' }}
-                          width={30}
+                          domain={[1, 10]}
+                          tick={{ fontSize: 12 }}
+                          stroke="hsl(150 5% 50%)"
+                          tickCount={5}
                         />
                         <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                                  <p className="text-sm text-muted-foreground">{data.fullDate}</p>
-                                  <p className="text-lg font-medium">
-                                    {data.score !== null ? `${data.score.toFixed(1)} / 10` : 'Keine Daten'}
-                                  </p>
-                                </div>
-                              );
-                            }
-                            return null;
+                          contentStyle={{
+                            backgroundColor: 'hsl(0 0% 100%)',
+                            border: '1px solid hsl(45 15% 88%)',
+                            borderRadius: '8px',
                           }}
+                          formatter={(value: number, name: string) => [
+                            value?.toFixed(1) || '-',
+                            SYMPTOM_LABELS[name] || name
+                          ]}
                         />
-                        <Area
-                          type="monotone"
-                          dataKey="score"
-                          stroke="hsl(150 45% 45%)"
-                          strokeWidth={2}
-                          fill="url(#colorScoreDesktop)"
-                          connectNulls
+                        <Legend
+                          formatter={(value) => SYMPTOM_LABELS[value] || value}
+                          iconType="circle"
                         />
-                      </AreaChart>
+                        {Object.keys(SYMPTOM_COLORS).map(key => (
+                          <Line
+                            key={key}
+                            type="monotone"
+                            dataKey={key}
+                            stroke={SYMPTOM_COLORS[key]}
+                            strokeWidth={2}
+                            dot={{ r: 3 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Letzte 14 Tage (1 = Sehr gut, 10 = Sehr schlecht)
+                  </p>
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Recent Entries Table */}
-              <Card className="animate-fade-up animation-delay-200">
+            {/* Right Column (35%) */}
+            <div className="space-y-6">
+              {/* Quick Stats */}
+              <div className="space-y-4 animate-in fade-in duration-500 delay-150">
+                <StatCard icon={Utensils} value={todayStats.todayMeals} label="Mahlzeiten heute" />
+                <StatCard icon={Activity} value={todayStats.todaySymptoms} label="Symptome erfasst" />
+                <StatCard icon={Pill} value={todayStats.todayMeds} label="Medikamente" />
+              </div>
+
+              {/* Recent Entries */}
+              <Card className="animate-in fade-in duration-500 delay-200">
                 <CardHeader>
-                  <CardTitle className="text-base">Heutige Einträge</CardTitle>
+                  <CardTitle>Letzte Einträge</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {combinedEntries.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>Noch keine Einträge heute.</p>
-                      <p className="text-sm mt-1">Starte mit deinem ersten Eintrag!</p>
-                    </div>
+                <CardContent className="space-y-2">
+                  {recentEntries.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">Noch keine Einträge vorhanden</p>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-20">Zeit</TableHead>
-                          <TableHead className="w-28">Typ</TableHead>
-                          <TableHead>Beschreibung</TableHead>
-                          <TableHead className="w-28">Bewertung</TableHead>
-                          <TableHead className="w-20"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {combinedEntries.slice(0, 10).map(entry => (
-                          <TableRow
-                            key={entry.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => {
-                              setSelectedEntry(entry);
-                              setEntryDetailOpen(true);
-                            }}
-                          >
-                            <TableCell className="text-muted-foreground">{entry.time}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  entry.type === 'symptom' ? 'bg-primary' :
-                                  entry.type === 'mahlzeit' ? 'bg-amber-500' : 'bg-blue-500'
-                                }`} />
-                                {entry.type === 'symptom' ? 'Symptom' :
-                                 entry.type === 'mahlzeit' ? 'Mahlzeit' : 'Medikament'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium">{entry.description}</TableCell>
-                            <TableCell className="text-muted-foreground">{entry.rating || '-'}</TableCell>
-                            <TableCell>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    recentEntries.map(entry => (
+                      <EntryItem key={entry.id} entry={entry} />
+                    ))
                   )}
                 </CardContent>
               </Card>
             </div>
-
-            {/* Right Column - 40% (2/5) */}
-            <div className="col-span-2 space-y-6">
-              {/* Quick Add Panel */}
-              <Card className="animate-fade-up animation-delay-100">
-                <CardHeader>
-                  <CardTitle className="text-base">Schnelleintrag</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Dialog open={addDialogOpen} onOpenChange={(open) => {
-                    setAddDialogOpen(open);
-                    if (!open) setSelectedEntryType(null);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="w-full h-12 justify-start gap-3"
-                        onClick={() => setSelectedEntryType('symptom')}
-                      >
-                        <Activity className="h-5 w-5" />
-                        Symptom erfassen
-                      </Button>
-                    </DialogTrigger>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full h-12 justify-start gap-3"
-                        onClick={() => setSelectedEntryType('mahlzeit')}
-                      >
-                        <Utensils className="h-5 w-5" />
-                        Mahlzeit hinzufügen
-                      </Button>
-                    </DialogTrigger>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full h-12 justify-start gap-3"
-                        onClick={() => setSelectedEntryType('medikament')}
-                      >
-                        <Pill className="h-5 w-5" />
-                        Medikament eintragen
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {selectedEntryType === 'symptom' && 'Symptom erfassen'}
-                          {selectedEntryType === 'mahlzeit' && 'Mahlzeit hinzufügen'}
-                          {selectedEntryType === 'medikament' && 'Medikament eintragen'}
-                          {!selectedEntryType && 'Neuer Eintrag'}
-                        </DialogTitle>
-                      </DialogHeader>
-                      {selectedEntryType ? (
-                        <AddEntryForm
-                          type={selectedEntryType}
-                          onSuccess={handleAddSuccess}
-                          onCancel={() => setSelectedEntryType(null)}
-                        />
-                      ) : (
-                        <EntryTypeSelection onSelect={setSelectedEntryType} />
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </CardContent>
-              </Card>
-
-              {/* Today's Overview Stats */}
-              <Card className="animate-fade-up animation-delay-200">
-                <CardHeader>
-                  <CardTitle className="text-base">Tagesübersicht</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-primary" />
-                      <span className="text-sm">Symptome erfasst</span>
-                    </div>
-                    <span className="font-medium">{todaysSymptoms.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 flex items-center justify-center text-primary text-xs">Ø</div>
-                      <span className="text-sm">Durchschnittliche Bewertung</span>
-                    </div>
-                    <span className="font-medium">
-                      {wellnessScore !== null ? `${wellnessScore.toFixed(1)} / 10` : '-'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Utensils className="h-4 w-4 text-amber-500" />
-                      <span className="text-sm">Mahlzeiten</span>
-                    </div>
-                    <span className="font-medium">{todaysMeals.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">Medikamente</span>
-                    </div>
-                    <span className="font-medium">{todaysMedications.length}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Symptom Distribution */}
-              {symptomDistribution.length > 0 && (
-                <Card className="animate-fade-up animation-delay-300">
-                  <CardHeader>
-                    <CardTitle className="text-base">Symptom-Verteilung (7 Tage)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={symptomDistribution}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={70}
-                            paddingAngle={2}
-                          >
-                            {symptomDistribution.map((_, index) => (
-                              <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                const data = payload[0].payload;
-                                return (
-                                  <div className="bg-card border border-border rounded-lg p-2 shadow-lg">
-                                    <p className="font-medium">{data.name}</p>
-                                    <p className="text-sm text-muted-foreground">{data.value} Einträge</p>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex flex-wrap gap-3 justify-center mt-2">
-                      {symptomDistribution.map((item, index) => (
-                        <div key={item.key} className="flex items-center gap-1.5 text-sm">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                          />
-                          <span className="text-muted-foreground">{item.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </div>
-        </div>
-
-        {/* Entry Detail Sheet for Desktop */}
-        <EntryDetailSheet
-          entry={selectedEntry}
-          open={entryDetailOpen}
-          onOpenChange={setEntryDetailOpen}
-          onDelete={handleDeleteEntry}
-          onEdit={() => {
-            setEntryDetailOpen(false);
-          }}
-        />
-      </div>
+        </main>
+      )}
     </div>
   );
 }
