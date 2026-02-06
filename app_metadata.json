@@ -2,6 +2,131 @@
   "appgroup_id": "698492e8bbff21811b058791",
   "appgroup_name": "Gesundheits- und Ern\u00e4hrungstagebuch",
   "apps": {
+    "medikamenteneinnahme": {
+      "app_id": "698492d7ef06076761e9c8ff",
+      "name": "Medikamenteneinnahme",
+      "controls": {
+        "zeitpunkt_einnahme": {
+          "identifier": "zeitpunkt_einnahme",
+          "label": "Datum und Uhrzeit",
+          "type": "date",
+          "subtype": "datetimeminute",
+          "fulltype": "date/datetimeminute",
+          "description": "A specific moment in time consisting of year, month, day, hour and minute. (Or `null`/`None`)\n\nThe field value will be a string in the format `<YYYY>-<MM>-<DD>T<HH>:<MM>` or `null`.\n\nFor example: `1879-03-14T11:30`.",
+          "required": null,
+          "in_list": true,
+          "in_mobile_list": true,
+          "in_text": true,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        },
+        "medikamentenname": {
+          "identifier": "medikamentenname",
+          "label": "Medikamentenname",
+          "type": "lookup",
+          "subtype": "select",
+          "fulltype": "lookup/select",
+          "description": "One selected option of multiple available options (or `null`).\n\nThe available options are defined in the `lookup_data` attribute of this control's LivingApp.\n\nThe field value will be the key in this `lookup_data` attribute or `null`.",
+          "required": null,
+          "in_list": true,
+          "in_mobile_list": true,
+          "in_text": true,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true,
+          "lookup_data": {
+            "ibuprofen_400mg": "Ibuprofen 400mg",
+            "vitamin_c_500mg": "Vitamin C 500mg",
+            "vitamin_d_2000": "Vitamin D 2000 Einheiten",
+            "vitamin_d_4000": "Vitamin D 4000 Einheiten",
+            "bitterliebe_1_kapsel": "1 Kapsel Bitterliebe",
+            "pascoflorin_sensitiv": "Pascoflorin sensitiv"
+          }
+        },
+        "notizen_medikamente": {
+          "identifier": "notizen_medikamente",
+          "label": "Notizen",
+          "type": "string",
+          "subtype": "textarea",
+          "fulltype": "string/textarea",
+          "description": "A string value that can contain multiple lines of text (or `null`).",
+          "required": null,
+          "in_list": true,
+          "in_mobile_list": false,
+          "in_text": false,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        }
+      }
+    },
+    "essgewohnheiten": {
+      "app_id": "698492d748e87e8fa3ef7811",
+      "name": "Essgewohnheiten",
+      "controls": {
+        "zeitpunkt_mahlzeit": {
+          "identifier": "zeitpunkt_mahlzeit",
+          "label": "Datum und Uhrzeit",
+          "type": "date",
+          "subtype": "datetimeminute",
+          "fulltype": "date/datetimeminute",
+          "description": "A specific moment in time consisting of year, month, day, hour and minute. (Or `null`/`None`)\n\nThe field value will be a string in the format `<YYYY>-<MM>-<DD>T<HH>:<MM>` or `null`.\n\nFor example: `1879-03-14T11:30`.",
+          "required": null,
+          "in_list": false,
+          "in_mobile_list": false,
+          "in_text": false,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        },
+        "mahlzeit_beschreibung": {
+          "identifier": "mahlzeit_beschreibung",
+          "label": "Mahlzeit / Nahrungsmittel",
+          "type": "string",
+          "subtype": "textarea",
+          "fulltype": "string/textarea",
+          "description": "A string value that can contain multiple lines of text (or `null`).",
+          "required": null,
+          "in_list": false,
+          "in_mobile_list": false,
+          "in_text": false,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        },
+        "menge_portion": {
+          "identifier": "menge_portion",
+          "label": "Menge / Portionsgr\u00f6\u00dfe",
+          "type": "string",
+          "subtype": "text",
+          "fulltype": "string/text",
+          "description": "A string value not longer than 4000 characters (or `null`).",
+          "required": null,
+          "in_list": true,
+          "in_mobile_list": true,
+          "in_text": true,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        },
+        "notizen_essen": {
+          "identifier": "notizen_essen",
+          "label": "Zus\u00e4tzliche Notizen",
+          "type": "string",
+          "subtype": "textarea",
+          "fulltype": "string/textarea",
+          "description": "A string value that can contain multiple lines of text (or `null`).",
+          "required": null,
+          "in_list": false,
+          "in_mobile_list": false,
+          "in_text": false,
+          "in_structured_search": false,
+          "in_fulltext_search": false,
+          "in_expert_search": true
+        }
+      }
+    },
     "symptomerfassung": {
       "app_id": "698492d20b8e72c3ec7888b3",
       "name": "Symptomerfassung",
@@ -78,72 +203,6 @@
           "description": "A string value that can contain multiple lines of text (or `null`).",
           "required": null,
           "in_list": true,
-          "in_mobile_list": false,
-          "in_text": false,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        }
-      }
-    },
-    "essgewohnheiten": {
-      "app_id": "698492d748e87e8fa3ef7811",
-      "name": "Essgewohnheiten",
-      "controls": {
-        "zeitpunkt_mahlzeit": {
-          "identifier": "zeitpunkt_mahlzeit",
-          "label": "Datum und Uhrzeit",
-          "type": "date",
-          "subtype": "datetimeminute",
-          "fulltype": "date/datetimeminute",
-          "description": "A specific moment in time consisting of year, month, day, hour and minute. (Or `null`/`None`)\n\nThe field value will be a string in the format `<YYYY>-<MM>-<DD>T<HH>:<MM>` or `null`.\n\nFor example: `1879-03-14T11:30`.",
-          "required": null,
-          "in_list": false,
-          "in_mobile_list": false,
-          "in_text": false,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        },
-        "mahlzeit_beschreibung": {
-          "identifier": "mahlzeit_beschreibung",
-          "label": "Mahlzeit / Nahrungsmittel",
-          "type": "string",
-          "subtype": "textarea",
-          "fulltype": "string/textarea",
-          "description": "A string value that can contain multiple lines of text (or `null`).",
-          "required": null,
-          "in_list": false,
-          "in_mobile_list": false,
-          "in_text": false,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        },
-        "menge_portion": {
-          "identifier": "menge_portion",
-          "label": "Menge / Portionsgr\u00f6\u00dfe",
-          "type": "string",
-          "subtype": "text",
-          "fulltype": "string/text",
-          "description": "A string value not longer than 4000 characters (or `null`).",
-          "required": null,
-          "in_list": true,
-          "in_mobile_list": true,
-          "in_text": true,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        },
-        "notizen_essen": {
-          "identifier": "notizen_essen",
-          "label": "Zus\u00e4tzliche Notizen",
-          "type": "string",
-          "subtype": "textarea",
-          "fulltype": "string/textarea",
-          "description": "A string value that can contain multiple lines of text (or `null`).",
-          "required": null,
-          "in_list": false,
           "in_mobile_list": false,
           "in_text": false,
           "in_structured_search": false,
@@ -313,73 +372,14 @@
           }
         }
       }
-    },
-    "medikamenteneinnahme": {
-      "app_id": "698492d7ef06076761e9c8ff",
-      "name": "Medikamenteneinnahme",
-      "controls": {
-        "zeitpunkt_einnahme": {
-          "identifier": "zeitpunkt_einnahme",
-          "label": "Datum und Uhrzeit",
-          "type": "date",
-          "subtype": "datetimeminute",
-          "fulltype": "date/datetimeminute",
-          "description": "A specific moment in time consisting of year, month, day, hour and minute. (Or `null`/`None`)\n\nThe field value will be a string in the format `<YYYY>-<MM>-<DD>T<HH>:<MM>` or `null`.\n\nFor example: `1879-03-14T11:30`.",
-          "required": null,
-          "in_list": true,
-          "in_mobile_list": true,
-          "in_text": true,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        },
-        "medikamentenname": {
-          "identifier": "medikamentenname",
-          "label": "Medikamentenname",
-          "type": "lookup",
-          "subtype": "select",
-          "fulltype": "lookup/select",
-          "description": "One selected option of multiple available options (or `null`).\n\nThe available options are defined in the `lookup_data` attribute of this control's LivingApp.\n\nThe field value will be the key in this `lookup_data` attribute or `null`.",
-          "required": null,
-          "in_list": true,
-          "in_mobile_list": true,
-          "in_text": true,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true,
-          "lookup_data": {
-            "ibuprofen_400mg": "Ibuprofen 400mg",
-            "vitamin_c_500mg": "Vitamin C 500mg",
-            "vitamin_d_2000": "Vitamin D 2000 Einheiten",
-            "vitamin_d_4000": "Vitamin D 4000 Einheiten",
-            "bitterliebe_1_kapsel": "1 Kapsel Bitterliebe",
-            "pascoflorin_sensitiv": "Pascoflorin sensitiv"
-          }
-        },
-        "notizen_medikamente": {
-          "identifier": "notizen_medikamente",
-          "label": "Notizen",
-          "type": "string",
-          "subtype": "textarea",
-          "fulltype": "string/textarea",
-          "description": "A string value that can contain multiple lines of text (or `null`).",
-          "required": null,
-          "in_list": true,
-          "in_mobile_list": false,
-          "in_text": false,
-          "in_structured_search": false,
-          "in_fulltext_search": false,
-          "in_expert_search": true
-        }
-      }
     }
   },
   "metadata": {
     "apps_list": [
-      "Symptomerfassung",
+      "Medikamenteneinnahme",
       "Essgewohnheiten",
-      "T\u00e4gliche Erfassung",
-      "Medikamenteneinnahme"
+      "Symptomerfassung",
+      "T\u00e4gliche Erfassung"
     ]
   }
 }

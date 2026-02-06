@@ -3,35 +3,35 @@
 ## 1. App Analysis
 
 ### What This App Does
-This is a personal health and nutrition diary that helps users track their daily wellbeing across four interconnected dimensions: symptoms (throat clearing, lymph swelling, energy, mood), eating habits, medication intake, and a daily combined log. The app enables users to identify correlations between what they eat, medications they take, and how they feel - essential for anyone managing chronic conditions or optimizing their health.
+This is a personal health and nutrition diary that helps users track three interconnected aspects of their daily wellness: what they eat (Essgewohnheiten), symptoms they experience (Symptomerfassung), and medications they take (Medikamenteneinnahme). The app enables users to identify correlations between diet, symptoms, and medication effectiveness over time. The "Tägliche Erfassung" app serves as a combined daily entry point.
 
 ### Who Uses This
-The typical user is someone managing their health proactively - perhaps dealing with food sensitivities, tracking energy levels, or monitoring symptoms that might correlate with diet or medication. They're not tech-savvy; they want a simple, calming interface to quickly log entries throughout the day and occasionally review patterns.
+Health-conscious individuals tracking their wellness journey - likely someone managing a chronic condition, food sensitivities, or working with a healthcare provider to understand symptom patterns. They want quick daily logging and the ability to spot trends.
 
 ### The ONE Thing Users Care About Most
-**"How am I feeling today?"** - Users want to see their current wellbeing status at a glance. The most recent symptom ratings (energy, mood) give them immediate feedback on their health trajectory. This is the emotional anchor of the dashboard.
+**"How am I feeling today compared to recent days?"** - Users want an immediate snapshot of their current symptom status and whether things are improving or worsening. The symptom trend is the hero.
 
 ### Primary Actions (IMPORTANT!)
-1. **Neuer Eintrag** (New daily entry) → Primary Action Button - Users log their combined daily status most frequently
+1. **Quick daily entry** → Primary Action Button (using Tägliche Erfassung)
 2. Log a specific symptom
-3. Record a meal
-4. Log medication intake
+3. Record medication intake
+4. Add a meal entry
 
 ---
 
 ## 2. What Makes This Design Distinctive
 
 ### Visual Identity
-A warm, nurturing palette built on soft sage green and cream creates a calm, healing atmosphere that suits a health diary. Unlike clinical health apps with cold blues, this design feels like a personal journal - inviting daily reflection without anxiety. The warmth comes from subtle terracotta accents that highlight important metrics, contrasting with the calming sage base.
+A calming, wellness-focused aesthetic with a soft sage green accent on a warm off-white canvas. The design feels like a premium wellness app - serene but not clinical, personal but not juvenile. The green evokes natural health and balance without being cliché. Generous whitespace creates breathing room that reflects the app's purpose of mindful self-tracking.
 
 ### Layout Strategy
-- **Hero element emphasis**: The "How I'm Feeling" card dominates the top half of mobile, using generous whitespace and a large circular progress indicator that visualizes today's average symptom rating
-- **Asymmetric desktop layout**: Wide left column (2/3) for the hero and chart, narrow right column (1/3) for recent activity timeline - this mirrors how users think (overview first, details second)
-- **Visual interest through typography scale**: Hero metric uses 64px bold, secondary KPIs use 24px semibold, creating dramatic hierarchy
-- **Breathing room**: Each section has ample padding, with more space between sections than within them
+- **Hero element:** A large symptom wellness score/indicator that dominates the top of the viewport. This uses size (large typography), prominent positioning (top center), and ample whitespace to create clear visual hierarchy.
+- **Asymmetric layout on desktop:** Wide left column (70%) for primary content (hero + symptom chart), narrow right sidebar (30%) for quick actions and recent activity.
+- **Size variation:** The hero wellness indicator is dramatically larger than secondary KPIs (48px vs 14px supporting text). Secondary stats are compact inline badges, not cards.
+- **Typography creates rhythm:** Bold 600-weight numbers with light 300-weight labels creates visual interest without clutter.
 
 ### Unique Element
-The "Wellbeing Ring" - a circular progress visualization around the hero metric showing today's average symptom rating on a 1-10 scale. The ring fills clockwise with a gradient from sage (good) to terracotta (needs attention), with the numeric value prominently displayed in the center. The ring has a thick 12px stroke with rounded caps and a subtle inner glow, making the daily health status feel approachable and almost game-like.
+The hero "Wellness Score" is displayed as a large number with a subtle colored background pill that shifts color based on the average symptom rating (green for good, amber for moderate, soft red for concerning). This creates an instant emotional read without requiring users to interpret numbers.
 
 ---
 
@@ -39,8 +39,8 @@ The "Wellbeing Ring" - a circular progress visualization around the hero metric 
 
 ### Font
 - **Family:** Plus Jakarta Sans
-- **URL:** `https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap`
-- **Why this font:** Professional yet friendly, with slightly rounded terminals that soften the clinical feel of a health app. The variable weights allow dramatic size hierarchy while maintaining visual cohesion.
+- **URL:** `https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap`
+- **Why this font:** Plus Jakarta Sans has a warm, approachable character with excellent readability. It's professional enough for health data but friendly enough for daily personal use. The font has distinctive letter shapes that prevent it from feeling generic.
 
 ### Color Palette
 All colors as complete hsl() functions:
@@ -48,270 +48,267 @@ All colors as complete hsl() functions:
 | Purpose | Color | CSS Variable |
 |---------|-------|--------------|
 | Page background | `hsl(45 30% 97%)` | `--background` |
-| Main text | `hsl(150 15% 20%)` | `--foreground` |
+| Main text | `hsl(200 15% 20%)` | `--foreground` |
 | Card background | `hsl(0 0% 100%)` | `--card` |
-| Card text | `hsl(150 15% 20%)` | `--card-foreground` |
-| Borders | `hsl(45 20% 88%)` | `--border` |
-| Primary action | `hsl(150 35% 45%)` | `--primary` |
+| Card text | `hsl(200 15% 20%)` | `--card-foreground` |
+| Borders | `hsl(45 15% 88%)` | `--border` |
+| Primary action | `hsl(152 35% 45%)` | `--primary` |
 | Text on primary | `hsl(0 0% 100%)` | `--primary-foreground` |
-| Accent highlight | `hsl(15 60% 55%)` | `--accent` |
-| Muted background | `hsl(45 20% 93%)` | `--muted` |
-| Muted text | `hsl(150 10% 45%)` | `--muted-foreground` |
-| Success/positive | `hsl(150 45% 40%)` | (component use) |
-| Error/negative | `hsl(0 65% 50%)` | `--destructive` |
+| Accent highlight | `hsl(152 25% 94%)` | `--accent` |
+| Muted background | `hsl(45 20% 94%)` | `--muted` |
+| Muted text | `hsl(200 10% 50%)` | `--muted-foreground` |
+| Success/positive | `hsl(152 45% 42%)` | (component use) |
+| Warning/moderate | `hsl(38 70% 55%)` | (component use) |
+| Error/negative | `hsl(0 55% 55%)` | `--destructive` |
 
 ### Why These Colors
-The sage green primary evokes growth, healing, and balance - perfect for a health journal. The warm cream background (slight yellow undertone) prevents the sterile feeling of pure white while complementing the sage. Terracotta accent adds warmth and draws attention to key metrics and actions without feeling alarming like red would. Together they create a "wellness journal" aesthetic that feels personal, not clinical.
+The warm off-white background (slight cream undertone) creates a soft, inviting canvas that feels personal rather than clinical. The sage green primary evokes natural health and wellness without being the typical "medical blue." The muted text color has a slight blue-gray that creates calm contrast. The warning amber and soft red are intentionally muted to avoid alarming users.
 
 ### Background Treatment
-The background uses a warm cream (`hsl(45 30% 97%)`) with a subtle noise texture applied via CSS (very subtle, 2% opacity) to add organic warmth. Cards sit on pure white to create gentle lift without harsh shadows.
+The page background uses a warm off-white (`hsl(45 30% 97%)`) that gives the interface warmth. Cards are pure white to create subtle depth without heavy shadows. This creates a layered, calm aesthetic.
 
 ---
 
 ## 4. Mobile Layout (Phone)
 
+Design mobile as a COMPLETELY SEPARATE experience, not squeezed desktop.
+
 ### Layout Approach
-The hero section commands attention by taking the entire first viewport. Secondary content reveals through scrolling, creating a focused, calming experience. Size variation is dramatic - the wellbeing ring and number dominate, while supporting metrics appear as compact inline elements below.
+The hero wellness indicator dominates the first viewport, creating an immediate emotional connection. Secondary stats are presented as a compact horizontal row of badges (not cards) to preserve vertical space. Visual interest comes from the dramatic size difference between the hero (large) and supporting elements (compact).
 
 ### What Users See (Top to Bottom)
 
 **Header:**
-- Left: "Mein Tagebuch" (My Diary) in 20px semibold, sage green
-- Right: Settings icon (subtle, muted color)
-- Clean, minimal, 56px height
+- App title "Mein Gesundheitstagebuch" left-aligned, 18px semi-bold
+- No navigation icons in header (action is fixed at bottom)
 
 **Hero Section (The FIRST thing users see):**
-- **The Wellbeing Ring**: Large circular progress indicator (200px diameter) centered
-- Inside the ring: Today's average symptom rating as large number (64px, 800 weight)
-- Below number: "Heutiges Wohlbefinden" label (14px, muted)
-- Ring gradient: sage green (good, 1-3) → amber (moderate, 4-6) → terracotta (poor, 7-10)
-- Below ring: Current date formatted as "Freitag, 6. Februar"
-- This section takes ~50% of viewport height
-- Generous whitespace around the ring creates calm, focused attention
-- **Why this is the hero**: It immediately answers "How am I doing?" - the user's primary concern
+- Takes approximately 35% of viewport height
+- Large wellness indicator in center: the average symptom score displayed as a number (64px bold) with a label "Aktuelles Befinden" (14px light) above it
+- Below the number: a subtle pill badge showing trend ("Besser als gestern" / "Wie gestern" / "Schlechter als gestern") with appropriate icon
+- The entire hero section has a subtle rounded background color that reflects the score:
+  - Score 1-3: light green tint (`hsl(152 40% 94%)`)
+  - Score 4-6: light amber tint (`hsl(38 50% 94%)`)
+  - Score 7-10: light coral tint (`hsl(0 40% 95%)`)
+- Why hero: This immediately answers "How am I doing?" which is the primary user question
 
-**Section 2: Quick Stats Row**
-- Horizontal row of 3 compact stat pills (not cards)
-- Each pill: icon + number + tiny label
-- Stats: "Einträge heute" (entries today), "Mahlzeiten" (meals logged), "Medikamente" (medications taken)
-- Subtle background, no shadows, inline styling
-- Creates visual relief between hero and list
+**Section 2: Heute auf einen Blick (Today's Summary)**
+- Horizontal row of 3 compact stat badges (not cards):
+  - Mahlzeiten: count icon + number
+  - Medikamente: pill icon + number
+  - Symptome: heart icon + number logged today
+- Each badge: subtle muted background, 12px text, icon 16px
+- Total row height: ~48px with padding
 
-**Section 3: Symptom Trend Chart**
-- Card with title "Wochen-Verlauf" (Weekly Trend)
-- Simplified area chart showing last 7 days of average symptom ratings
-- Sage green fill with darker stroke
-- X-axis: Day abbreviations (Mo, Di, Mi...)
-- Y-axis: hidden on mobile, values 1-10 implied
-- Touch any point to see that day's value
-- ~180px height, compact but readable
+**Section 3: Symptom-Verlauf (7-Tage)**
+- Section title "Letzte 7 Tage" with muted text, 14px
+- Simple area chart showing daily average symptom scores
+- Chart height: ~160px
+- Minimal styling: single sage green line/area, light grid, date labels on x-axis
+- Touch: tap on a point shows tooltip with that day's details
 
-**Section 4: Recent Activity**
-- Title "Letzte Einträge" (Recent Entries)
-- Simple list (not cards) showing last 5 entries across all types
-- Each row: colored dot (by type), time, brief description
-- Color coding: Sage = symptom, Amber = meal, Blue = medication
-- Subtle dividers between items
+**Section 4: Letzte Einträge**
+- Section title "Letzte Einträge"
+- Vertical list of last 5 entries across all apps
+- Each entry: icon (meal/pill/symptom), description truncated, time "vor 2 Std"
+- Simple dividers between entries, no cards
+- If tapped: expands to show full details inline
 
 **Bottom Navigation / Action:**
-- Fixed bottom bar with centered FAB
-- FAB: Large (64px) sage green circle with "+" icon
-- Label below FAB: "Neuer Eintrag"
-- Tapping opens bottom sheet with entry type selection
+- Fixed bottom bar with prominent primary action button
+- Button: "Eintrag hinzufügen" with + icon
+- Full-width minus padding, 52px height
+- Sage green background, white text, rounded-lg corners
 
 ### Mobile-Specific Adaptations
-- Hero ring scales to fit width with padding
-- Chart simplified to area only, no legends
-- Recent activity as simple list, not cards
-- All tap targets minimum 44px
-- Bottom action bar always visible
+- Chart simplified: only 7 data points, no hover states
+- Recent entries list limited to 5 items
+- All cards replaced with lightweight divider-separated rows
+- Hero dominates first fold, everything else requires scroll
 
 ### Touch Targets
-- FAB: 64px diameter (comfortable thumb target)
-- List items: 48px minimum height
-- Settings icon: 44x44px touch area
+- Primary action button: 52px height minimum
+- List items: 48px minimum tap height
+- Chart data points: 44px touch target around each point
 
 ### Interactive Elements
-- Chart points: tap to show value tooltip
-- Recent entries: tap to expand inline and show full notes
-- Wellbeing ring: animated on load (fills up to current value)
+- Chart points: tap to reveal daily detail tooltip
+- Recent entry items: tap to expand and show full entry details
+- Wellness pill badge: tap to see breakdown of symptoms contributing to score
 
 ---
 
 ## 5. Desktop Layout
 
 ### Overall Structure
-Two-column asymmetric layout (2:1 ratio):
-- **Left column (66%)**: Hero card (wellbeing ring + today's summary) stacked above trend chart
-- **Right column (33%)**: Quick stats at top, recent activity timeline below
-- Maximum content width: 1200px, centered
-- Eye flow: Hero ring → chart → recent activity (F-pattern)
+Two-column asymmetric layout:
+- **Left column (70%):** Hero wellness indicator + symptom trend chart + recent entries
+- **Right sidebar (30%):** Quick action buttons + today's summary stats + medication reminder
+
+Eye flow: Hero (top-left) → Chart (below hero) → Sidebar quick actions (right) → Recent entries (scroll)
+
+Visual interest comes from the asymmetric split and the hero's dominant sizing within the left column.
 
 ### Section Layout
 
-**Top Area (Full Width):**
-- Header bar: "Mein Gesundheitstagebuch" left, "Neuer Eintrag" button right
-- Primary action button: Sage green, prominent, always visible
+**Top Area (Hero Row):**
+- Left: Large wellness indicator (same as mobile but larger - 72px number)
+- Trend badge below the number
+- Total hero section: ~200px height with generous whitespace
 
-**Left Column:**
-- Hero Card (top): Wellbeing ring (240px) with today's stats beside it
-  - Ring on left side of card
-  - Right side: Date, symptom breakdown (4 mini bars for each type), quick notes preview
-  - Creates asymmetry within the card itself
-- Trend Chart (below hero): Full 7-day view with all symptom types
-  - Line chart with 4 colored lines (one per symptom type)
-  - Hover to see values
-  - Time filter: 7D | 14D | 30D toggle
+**Main Content Area (Left Column, Below Hero):**
+- Symptom trend chart: full width of left column, 280px height
+- Title "Symptom-Verlauf" above chart
+- Below chart: "Letzte Einträge" section as a compact table-like list
 
-**Right Column:**
-- Quick Stats Card: 3 metrics in horizontal arrangement
-  - Entries today, Meals logged, Medications taken
-  - Compact card, no excessive styling
-- Activity Timeline (below):
-  - Vertical timeline style with colored dots
-  - Shows last 10 entries
-  - Each entry: time, type badge, description snippet
-  - Subtle connector lines between entries
-  - Scrollable if needed (max-height with overflow)
+**Right Sidebar:**
+- Sticky when scrolling
+- Quick Action Card: "Schnelleintrag" with 3 icon buttons stacked:
+  - Mahlzeit erfassen
+  - Symptom erfassen
+  - Medikament erfassen
+- Below: Today's Stats card showing same 3 metrics as mobile but vertical
+- Below: If any medications due, show reminder card
 
 ### What Appears on Hover
-- Chart lines: highlight active line, show tooltip with date + value
-- Timeline entries: subtle background highlight, full description preview
-- Quick stats: subtle lift (2px shadow increase)
+- Chart line points: detailed tooltip with exact values and notes
+- Recent entry rows: subtle background highlight, shows "Details anzeigen" text
+- Quick action buttons: slight scale up (1.02) and shadow increase
 
 ### Clickable/Interactive Areas
-- Timeline entries: click to open detail modal
-- Chart: click any data point to scroll timeline to that day's entries
-- Symptom breakdown bars in hero: click to filter chart by that type
+- Each recent entry row: click opens a slide-over panel with full details
+- Chart: click on data point shows that day's full log
+- Wellness score: click shows breakdown modal of contributing symptoms
 
 ---
 
 ## 6. Components
 
-### Hero KPI: Wellbeing Ring
+### Hero KPI
 The MOST important metric that users see first.
 
-- **Title:** Heutiges Wohlbefinden (Today's Wellbeing)
-- **Data source:** Symptomerfassung app (for dedicated entries) + TaeglicheErfassung (for combined logs)
-- **Calculation:** Average of today's symptom ratings (bewertung_symptom field, convert wert_1 to 1, wert_10 to 10). If no entries today, show last entry's value with "Letzter Eintrag" label
-- **Display:** Large circular progress ring (200px mobile, 240px desktop) with numeric value centered inside. Ring fills based on inverted scale (10 = empty/red, 1 = full/green) so fuller ring = better feeling
-- **Context shown:** Below the ring show "besser als gestern" or "schlechter als gestern" comparison with small arrow indicator
-- **Why this is the hero:** Immediately answers the user's core question: "How am I feeling?" Provides emotional anchor and motivation for logging
+- **Title:** Aktuelles Befinden
+- **Data source:** Symptomerfassung (symptom tracking app)
+- **Calculation:** Average of `bewertung_symptom` values from today's entries. Score is inverted for display: 1 (Sehr gut) = best, 10 (Sehr schlecht) = worst. Calculate average, then display. If no entries today, show yesterday's average with "Gestern:" prefix.
+- **Display:** Large centered number (64px mobile, 72px desktop, font-weight 700). Colored background pill behind the entire hero section. Subtle trend indicator below.
+- **Context shown:** Comparison text: "Besser als gestern" (if today avg < yesterday avg), "Wie gestern" (same), "Schlechter als gestern" (if worse). Show with small arrow icon.
+- **Why this is the hero:** Users open the app to answer "How am I feeling?" - this answers it instantly with both a number and emotional color coding.
 
 ### Secondary KPIs
 
-**Einträge heute (Entries Today)**
-- Source: Count across all 4 apps where date = today
-- Calculation: Count of records where zeitpunkt_* date matches today
+**Mahlzeiten heute**
+- Source: Essgewohnheiten (filtered to today)
+- Calculation: Count of records where `zeitpunkt_mahlzeit` is today
 - Format: number
-- Display: Compact pill with icon (clipboard), number prominent
+- Display: Compact inline badge with utensil icon, muted background
 
-**Mahlzeiten heute (Meals Today)**
-- Source: Essgewohnheiten + TaeglicheErfassung (where mahlzeit_beschreibung exists)
-- Calculation: Count
+**Medikamente heute**
+- Source: Medikamenteneinnahme (filtered to today)
+- Calculation: Count of records where `zeitpunkt_einnahme` is today
 - Format: number
-- Display: Compact pill with icon (utensils), number prominent
+- Display: Compact inline badge with pill icon, muted background
 
-**Medikamente heute (Medications Today)**
-- Source: Medikamenteneinnahme + TaeglicheErfassung (where medikamentenname exists)
-- Calculation: Count
+**Symptome erfasst**
+- Source: Symptomerfassung (filtered to today)
+- Calculation: Count of records where `zeitpunkt_symptom` is today
 - Format: number
-- Display: Compact pill with icon (pill), number prominent
+- Display: Compact inline badge with activity/pulse icon, muted background
 
-### Chart: Weekly Symptom Trend
-- **Type:** Area chart (single line) on mobile, Multi-line chart on desktop
-- **Why this type:** Area charts are calming and show trends clearly; multiple lines on desktop allow symptom comparison
-- **Title:** Wochen-Verlauf (Weekly Trend)
-- **What question it answers:** "Is my wellbeing improving or declining over time?"
-- **Data source:** Symptomerfassung (bewertung_symptom by day)
-- **X-axis:** Last 7 days, formatted as day abbreviations (Mo, Di, Mi, Do, Fr, Sa, So)
-- **Y-axis:** 1-10 scale (1 = best, 10 = worst), inverted visually so higher on chart = better
-- **Mobile simplification:** Single aggregated line (average of all symptoms), no legend, minimal axis labels
-- **Desktop enhancement:** 4 separate lines (one per symptomtyp), legend below chart, hover tooltips
+### Chart
 
-### Lists/Tables: Recent Activity
+- **Type:** Area chart (soft filled area under line) - chosen because it shows trend progression smoothly and the filled area creates visual weight that emphasizes the wellness journey over time. Line-only would feel too clinical.
+- **Title:** Symptom-Verlauf (letzte 7 Tage)
+- **What question it answers:** "Is my condition improving, stable, or worsening over the past week?"
+- **Data source:** Symptomerfassung
+- **X-axis:** Date (last 7 days), formatted as weekday abbreviation (Mo, Di, Mi, Do, Fr, Sa, So)
+- **Y-axis:** Average symptom score (1-10 scale, but inverted visually: 1 at top = good, 10 at bottom = bad). Label: "Befinden"
+- **Mobile simplification:** Same chart, but remove y-axis labels, only show gridlines. Touch points for tooltips.
+- **Colors:** Sage green fill with 20% opacity, solid sage green line
+
+### Lists/Tables
 
 **Letzte Einträge (Recent Entries)**
-- Purpose: Give users context on recent logging activity, easy reference to past entries
-- Source: All 4 apps, merged and sorted by date
-- Fields shown: Time (relative: "vor 2 Stunden"), type badge, description (truncated)
-- Mobile style: Simple list with colored left border per type
-- Desktop style: Timeline with vertical connector, more detail visible
-- Sort: Most recent first
+- Purpose: Quick review of what was logged recently, helps users remember if they logged something
+- Source: Combined from all apps (Essgewohnheiten, Medikamenteneinnahme, Symptomerfassung, TaeglicheErfassung)
+- Fields shown:
+  - Icon (varies by type: utensils for meals, pill for meds, activity for symptoms, calendar for daily)
+  - Primary text: meal description, medication name, or symptom type
+  - Secondary text: time ago (vor X Min/Std/Tagen)
+  - For symptoms: small colored dot indicating severity
+- Mobile style: Simple list with subtle dividers, no cards
+- Desktop style: Compact table-like rows with hover state
+- Sort: By datetime descending (most recent first)
 - Limit: 5 on mobile, 10 on desktop
 
 ### Primary Action Button (REQUIRED!)
 
-- **Label:** "Neuer Eintrag" (New Entry)
-- **Action:** Opens entry form dialog/bottom sheet
-- **Target app:** TaeglicheErfassung (the combined daily log - most flexible)
-- **What data:**
-  - zeitpunkt_eintrag: auto-filled with current datetime
-  - Form sections for: Mahlzeit (optional), Symptom (optional), Medikament (optional)
-  - At least one section must be filled
-- **Mobile position:** bottom_fixed (FAB style, 64px, centered)
-- **Desktop position:** header (right side, prominent button)
-- **Why this action:** The combined daily entry is the most flexible - users can log any combination of data without navigating to specific apps. This matches how people naturally think: "Let me quickly note what I ate and how I'm feeling" rather than "Let me open the meals app, then the symptoms app..."
+- **Label:** "Eintrag hinzufügen" (with + icon)
+- **Action:** Opens a modal/sheet with quick entry form for Tägliche Erfassung
+- **Target app:** Tägliche Erfassung (69858612b7a952d0ddc01987)
+- **What data:** The form includes:
+  - Datum und Uhrzeit (auto-filled to now)
+  - Symptom quick-select (dropdown: Räuspern, Lymphschwellung, Energie, Stimmung)
+  - Bewertung (1-5 scale radio: Sehr gut → Sehr schlecht)
+  - Optional: Mahlzeit description (textarea)
+  - Optional: Medikament (dropdown from list)
+  - Submit button: "Speichern"
+- **Mobile position:** bottom_fixed - full-width button in a fixed bottom bar
+- **Desktop position:** Prominent in right sidebar, top of sidebar
+- **Why this action:** Daily tracking is the core workflow. Users need to log multiple data points (symptom + meal + meds) quickly. The Tägliche Erfassung app combines all three, making it the most efficient single action.
 
 ---
 
 ## 7. Visual Details
 
 ### Border Radius
-Rounded (12px for cards, 8px for buttons, 24px for pills/badges)
-- Creates soft, approachable feeling
-- Consistent across all elements
+- Cards: 12px (rounded-xl)
+- Buttons: 10px (rounded-lg)
+- Badges/pills: 9999px (full pill shape)
+- Input fields: 8px (rounded-md)
 
 ### Shadows
-Subtle, warm-tinted shadows:
-- Cards: `0 2px 8px hsl(45 20% 70% / 0.15)`
-- Elevated (hover): `0 4px 12px hsl(45 20% 70% / 0.2)`
-- No harsh black shadows - keeps the warm aesthetic
+- Cards: Subtle shadow `0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)`
+- Elevated elements (modals, dropdowns): `0 4px 12px rgba(0,0,0,0.08)`
+- Buttons on hover: `0 2px 8px rgba(0,0,0,0.08)`
 
 ### Spacing
-Spacious - generous padding creates calm:
-- Card padding: 24px
-- Section gaps: 24px mobile, 32px desktop
-- Component internal spacing: 16px
-- Breathing room around hero: 32px all sides
+- Spacious - generous padding throughout
+- Card internal padding: 20px (mobile), 24px (desktop)
+- Section gaps: 24px (mobile), 32px (desktop)
+- Element gaps within sections: 12px
 
 ### Animations
-- **Page load:** Wellbeing ring fills with smooth easing (800ms), stats fade in staggered (200ms delay each)
-- **Hover effects:** Cards lift 2px with shadow increase (150ms ease)
-- **Tap feedback:** Scale to 0.98 then back (100ms)
-- **Chart:** Lines draw in from left on load (600ms)
+- **Page load:** Subtle stagger fade-in. Hero fades in first (0ms), then stats (100ms), then chart (200ms), then list (300ms). Each fade takes 300ms with ease-out.
+- **Hover effects:** Cards lift slightly (translateY -2px) with shadow increase. Buttons scale to 1.02. Transitions: 150ms ease.
+- **Tap feedback:** Brief scale down to 0.98 then back. 100ms duration.
 
 ---
 
 ## 8. CSS Variables (Copy Exactly!)
 
-```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+The implementer MUST copy these values exactly into `src/index.css`:
 
+```css
 :root {
   --background: hsl(45 30% 97%);
-  --foreground: hsl(150 15% 20%);
+  --foreground: hsl(200 15% 20%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(150 15% 20%);
+  --card-foreground: hsl(200 15% 20%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(150 15% 20%);
-  --primary: hsl(150 35% 45%);
+  --popover-foreground: hsl(200 15% 20%);
+  --primary: hsl(152 35% 45%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(45 25% 92%);
-  --secondary-foreground: hsl(150 15% 25%);
-  --muted: hsl(45 20% 93%);
-  --muted-foreground: hsl(150 10% 45%);
-  --accent: hsl(15 60% 55%);
-  --accent-foreground: hsl(0 0% 100%);
-  --destructive: hsl(0 65% 50%);
-  --border: hsl(45 20% 88%);
-  --input: hsl(45 20% 88%);
-  --ring: hsl(150 35% 45%);
+  --secondary: hsl(45 20% 94%);
+  --secondary-foreground: hsl(200 15% 25%);
+  --muted: hsl(45 20% 94%);
+  --muted-foreground: hsl(200 10% 50%);
+  --accent: hsl(152 25% 94%);
+  --accent-foreground: hsl(152 35% 30%);
+  --destructive: hsl(0 55% 55%);
+  --border: hsl(45 15% 88%);
+  --input: hsl(45 15% 88%);
+  --ring: hsl(152 35% 45%);
   --radius: 0.75rem;
-}
-
-body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 ```
 
@@ -320,16 +317,13 @@ body {
 ## 9. Implementation Checklist
 
 The implementer should verify:
-- [ ] Font loaded from URL above (Plus Jakarta Sans with weights 300-800)
-- [ ] All CSS variables copied exactly to src/index.css
-- [ ] Mobile layout matches Section 4 (hero ring dominant, bottom FAB)
-- [ ] Desktop layout matches Section 5 (2:1 columns, header action button)
-- [ ] Hero element is prominent as described (200px ring mobile, 240px desktop)
-- [ ] Colors create the warm, nurturing mood described in Section 2
-- [ ] Wellbeing ring animates on load
-- [ ] Chart shows weekly symptom trend with proper colors
-- [ ] Recent activity list is functional with correct color coding
-- [ ] Primary action button opens form for TaeglicheErfassung
-- [ ] Ring gradient uses sage → terracotta based on symptom value
-- [ ] All date fields use YYYY-MM-DDTHH:MM format (no seconds!)
-- [ ] Symptom ratings converted correctly (wert_1 = 1, wert_10 = 10)
+- [ ] Font loaded from URL above (Plus Jakarta Sans with weights 300,400,500,600,700)
+- [ ] All CSS variables copied exactly
+- [ ] Mobile layout matches Section 4 (hero dominant, compact badges, fixed bottom button)
+- [ ] Desktop layout matches Section 5 (70/30 split, sticky sidebar)
+- [ ] Hero element is prominent as described (large number, colored background based on score)
+- [ ] Colors create the calm, wellness mood described in Section 2
+- [ ] Chart uses area fill with sage green color
+- [ ] Primary action button is always visible and prominent
+- [ ] Recent entries combine all data sources
+- [ ] Animations are subtle and performant
